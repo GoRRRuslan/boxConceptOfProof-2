@@ -1,0 +1,127 @@
+import { BOX_CENTER_HEIGHT_UNITS } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
+import { Group, type Material, Mesh, MeshPhysicalMaterial, MeshStandardMaterial, type Object3D } from 'three'
+
+// Parts of the model (docs/MODEL.md). They are the five top-level nodes of the GLB scene; their node
+// names get a numeric suffix from GLTFLoader when a mesh and a node share a name, so match by prefix.
+export enum EBoxPartName {
+  Base = 'Shell_Base',
+  Lid = 'Shell_Lid',
+  Wordmark = 'Shell_Wordmark',
+  Cushion = 'Shell_Fitted_Cushion',
+}
+
+export interface IBoxLook {
+  // Linear RGB, each channel 0..1.
+  color: [number, number, number]
+  roughness: number
+  metallic: number
+  clearCoat: number
+}
+
+export interface IBoxInstance {
+  // Moved, turned and scaled every frame (position = box centre).
+  root: Group
+  // The lid and its wordmark: they swing about the hinge pivot together.
+  lidParts: Object3D[]
+  // Materials that carry the light from inside the opened box (cushion and inner side of the lid).
+  glowMaterials: MeshStandardMaterial[]
+}
+
+// The mesh of every primitive of a part: a one-primitive part is a Mesh, a part with several
+// primitives is a Group of Meshes in primitive order.
+const getPrimitiveMeshes = (part: Object3D): Mesh[] =>
+  part instanceof Mesh ? [part] : part.children.filter((child): child is Mesh => child instanceof Mesh)
+
+const findPart = (model: Object3D, partName: EBoxPartName): Object3D | undefined =>
+  model.children.find(child => child.name.startsWith(partName))
+
+// A glTF "standard" material turned into a physical one, so the clear coat can be set per box.
+const toPhysicalMaterial = (source: Material): MeshPhysicalMaterial => {
+  if (source instanceof MeshPhysicalMaterial) {
+    return source.clone()
+  }
+
+  const physicalMaterial = new MeshPhysicalMaterial()
+
+  MeshStandardMaterial.prototype.copy.call(physicalMaterial, source)
+
+  return physicalMaterial
+}
+
+// Indices of the primitives used for the body look (outer surface) and for the inner glow.
+interface IPrimitiveTarget {
+  partName: EBoxPartName
+  primitiveIndex: number
+}
+
+const BODY_TARGETS: IPrimitiveTarget[] = [
+  { partName: EBoxPartName.Base, primitiveIndex: 0 },
+  { partName: EBoxPartName.Lid, primitiveIndex: 0 },
+]
+const GLOW_TARGETS: IPrimitiveTarget[] = [
+  { partName: EBoxPartName.Cushion, primitiveIndex: 0 },
+  { partName: EBoxPartName.Lid, primitiveIndex: 1 },
+]
+
+// One box for one card: a clone of the loaded model (geometries and untouched materials are shared,
+// so 64 boxes cost 64 transforms, not 64 copies) whose body and glow materials are its own.
+export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadows: boolean): IBoxInstance => {
+  const model = template.clone(true)
+  const root = new Group()
+  const glowMaterials: MeshStandardMaterial[] = []
+
+  for (const { partName, primitiveIndex } of BODY_TARGETS) {
+    const part = findPart(model, partName)
+    const mesh = part ? getPrimitiveMeshes(part)[primitiveIndex] : undefined
+
+    if (!mesh) {
+      continue
+    }
+
+    const material = toPhysicalMaterial(mesh.material as Material)
+
+    material.color.setRGB(look.color[0], look.color[1], look.color[2])
+
+    material.roughness = look.roughness
+
+    material.metalness = look.metallic
+
+    material.clearcoat = look.clearCoat
+
+    mesh.material = material
+  }
+
+  for (const { partName, primitiveIndex } of GLOW_TARGETS) {
+    const part = findPart(model, partName)
+    const mesh = part ? getPrimitiveMeshes(part)[primitiveIndex] : undefined
+
+    if (!mesh) {
+      continue
+    }
+
+    const material = (mesh.material as MeshStandardMaterial).clone()
+
+    mesh.material = material
+
+    glowMaterials.push(material)
+  }
+
+  model.traverse(object => {
+    object.castShadow = castShadows
+
+    object.receiveShadow = castShadows
+  })
+
+  // The model's base rests at Y = 0: shift it so that the group's origin is the middle of the box.
+  model.position.set(0, -BOX_CENTER_HEIGHT_UNITS, 0)
+
+  root.add(model)
+
+  const lidParts = [EBoxPartName.Lid, EBoxPartName.Wordmark].flatMap(partName => {
+    const part = findPart(model, partName)
+
+    return part ? [part] : []
+  })
+
+  return { root, lidParts, glowMaterials }
+}
