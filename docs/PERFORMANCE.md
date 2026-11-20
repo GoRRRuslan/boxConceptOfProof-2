@@ -39,3 +39,15 @@ Marks come from `services/performance/startupTimeline.ts`.
 - The first frame itself takes seconds on the simulator (shader compilation in software GL). The entrance animation starts on the first frame that has boxes, so the pop-in is visible, and render-on-demand only rests after a run of quick frames.
 - Before: the list showed for a long time without boxes. Two causes were found: (1) a bug where the entrance start time was never assigned, so boxes stayed at scale 0 (fixed, `resolveEntranceStart` + test); (2) the PMREM environment. "Before" numbers for Android were not recorded.
 - The model is preloaded at app start (`preloadBoxModel`).
+
+## Look tuning experiments (Android Emulator, headless) — not adopted
+
+Goal: look closer to repo 1 (more saturated, softer highlights) without losing 60 FPS. Results (screenshots in `docs/media/look-experiments/`):
+
+- **Windowed vs headless emulator:** the same build ran at ~22 FPS in a visible emulator window and at 60 FPS with `emulator -no-window`. All FPS numbers must be taken headless.
+- `NeutralToneMapping` (instead of ACES) gives clearly more vivid, repo-1-like colours (`look-h2-catalogue.png`), but in these runs the emulator dropped to 30 FPS scrolling / 15 FPS in inspect.
+- A 4th light (ambient or hemisphere), dropping the clear coat (standard instead of physical body material), and larger shadow bias were each tried; every build that contained them ran at 30/15 FPS, and the committed code ran at 60 FPS in the runs taken right before and after. I could not isolate a single cause: the emulator's GPU behaves bistably (frames either fit in 16.7 ms or fall to 33/66 ms) and a small change in shader cost flips it, so these changes were **reverted**. Treat 60 FPS on the emulator as "at the limit".
+- Higher render scale (0.42–0.5) with MSAA: 15 FPS in inspect (see above). No FXAA/post-processing was tried.
+- Not done: matching light intensities to repo 1 side by side, softening the specular, fixing the shadow acne in the inspect view (acne is visible at bias −0.0004 / normalBias 0.012; shadows are only drawn while inspecting).
+
+So the known visual gaps versus repo 1 remain: jagged edges (render scale 0.37), darker/less saturated colours (ACES, no environment light), a harder white highlight on glossy boxes in the iOS Simulator, shadow acne when inspecting.
