@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Group } from 'three'
 
 import boxModelSource from '@assets/models/box.glb'
-import { ENTRANCE_STAGGER_MILLISECONDS } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
+import { ENTRANCE_DURATION_MILLISECONDS, ENTRANCE_STAGGER_MILLISECONDS } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
+import { SCENE_READY_MINIMUM_FRAMES, SCENE_READY_SETTLE_MILLISECONDS } from '@flows/catalogueFlow/_config/sceneRenderConfig'
 import { computeBoxPose } from '@flows/catalogueFlow/_facadesLogic/computeBoxPose'
 import { ENTRANCE_NOT_STARTED, resolveEntranceStart } from '@flows/catalogueFlow/_facadesLogic/resolveEntranceStart'
 import { computeEntranceScale, computePressScale } from '@flows/catalogueFlow/_facadesLogic/computeCardAnimation'
@@ -35,7 +36,7 @@ import {
   stepScrollVelocity,
 } from '@flows/openingFlow/_facadesLogic/computeSceneEffects'
 import type { IOpeningPose } from '@flows/openingFlow/_types'
-import { applySceneEffects } from '@services/sceneEffects/applySceneEffects'
+import { WARM_UP_MILLISECONDS as SCENE_EFFECTS_WARM_UP_MILLISECONDS, applySceneEffects } from '@services/sceneEffects/applySceneEffects'
 import { useFacadeSceneEffects } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/CatalogueBoxes/_facades/useFacadeSceneEffects'
 import { type IBoxInstance, createBoxInstance } from '@services/boxModel/createBoxInstance'
 import { EStartupMark, markStartup } from '@services/performance/startupTimeline'
@@ -62,7 +63,7 @@ const MINIMUM_VISIBLE_SCALE = 0.0005
 // swings open, with light glowing from inside.
 export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFacadeCatalogueBoxesParams) => {
   const { width: viewportWidth, height: viewportHeight } = viewport
-  const { scrollOffset, openingScene, dragState, tilt, pressState } = sceneSync
+  const { scrollOffset, openingScene, dragState, tilt, pressState, sceneReadiness } = sceneSync
 
   // --------------------------- State ------------------------- //
   const [template, setTemplate] = useState<Group | null>(null)
@@ -70,6 +71,8 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
 
   // -------------------------- Values ------------------------- //
   const entranceStartedAt = useRef<number>(ENTRANCE_NOT_STARTED)
+  // Frames drawn since the entrance started: the scene is ready (and says so) only after enough of them.
+  const framesSinceEntrance = useRef<number>(0)
   // Last glow strength written to the boxes (so a material is only touched when the strength really changes).
   const lastGlowStrength = useRef<number>(0)
   const lastGlowCardIndex = useRef<number>(-1)
@@ -194,6 +197,22 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
     }
 
     const entranceStart = entranceStartedAt.current
+
+    // Ready to be shown: the model is loaded, every box has popped in, the effects were warmed up (their pipelines compiled), enough frames
+    // were drawn since and the picture has settled. The list and the loader wait for this flag.
+    if (!sceneReadiness.getBlocking()) {
+      framesSinceEntrance.current += 1
+
+      const entranceEnd = entranceStart + (instances.length - 1) * ENTRANCE_STAGGER_MILLISECONDS + ENTRANCE_DURATION_MILLISECONDS
+      const effectsWarmedUpAt = tintCache.startedAtMilliseconds === 0 ? Number.MAX_SAFE_INTEGER : tintCache.startedAtMilliseconds + SCENE_EFFECTS_WARM_UP_MILLISECONDS
+
+      if (
+        framesSinceEntrance.current >= SCENE_READY_MINIMUM_FRAMES &&
+        nowMilliseconds >= Math.max(entranceEnd, effectsWarmedUpAt) + SCENE_READY_SETTLE_MILLISECONDS
+      ) {
+        sceneReadiness.setBlocking(true)
+      }
+    }
 
     const poses: IOpeningPose[] = []
     let focusedPose: IOpeningPose | null = null

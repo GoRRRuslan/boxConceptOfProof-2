@@ -7,6 +7,8 @@ import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 
 import { createSharedValue } from '@services/sceneSync/createSharedValue'
 
 import { CARD_HEIGHT, LIST_TOP_PADDING } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
+import { SCENE_READY_POLL_MILLISECONDS, SCENE_READY_TIMEOUT_MILLISECONDS } from '@flows/catalogueFlow/_config/sceneRenderConfig'
+import { logDiagnostic } from '@services/performance/diagnosticLog'
 import { INITIAL_PRESS_STATE, type IPressState, endPress, startPress } from '@flows/catalogueFlow/_facadesLogic/computeCardAnimation'
 import { useAdapterCatalogueCards } from '@flows/catalogueFlow/_adapters/useAdapterCatalogueCards'
 import { useOpeningFacade } from '@flows/openingFlow/_facades/useOpeningFacade'
@@ -42,6 +44,7 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
   // --------------------------- State ------------------------- //
   const [viewport, setViewport] = useState<ICatalogueViewport | null>(null)
   const [isScrolling, setIsScrolling] = useState<boolean>(false)
+  const [isSceneReady, setIsSceneReady] = useState<boolean>(false)
   // A finger is on a card (or just left it): the squeeze animation needs frames.
   const [isPressing, setIsPressing] = useState<boolean>(false)
   const pressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -71,6 +74,7 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
     // Revealed stays continuous (the light inside the box pulses) until the box has been put away.
     (opening.phase === EOpeningPhase.Revealed && !opening.isBoxPutAway)
   const pressState = useMemo(() => createSharedValue<IPressState>(INITIAL_PRESS_STATE), [])
+  const sceneReadiness = useMemo(() => createSharedValue<boolean>(false), [])
   const sceneSync: ICatalogueSceneSync = useMemo(
     () => ({
       scrollOffset,
@@ -78,8 +82,9 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
       dragState: opening.dragState,
       tilt: opening.tilt,
       pressState,
+      sceneReadiness,
     }),
-    [scrollOffset, opening.sceneState, opening.dragState, opening.tilt, pressState],
+    [scrollOffset, opening.sceneState, opening.dragState, opening.tilt, pressState, sceneReadiness],
   )
 
   // ------------------- Handlers -------------------------- //
@@ -157,6 +162,31 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
     }
   }, [viewport, cards.length])
 
+  // The scene says when it is ready (a flag it sets in its frame loop); this watches for it. The wait is capped, so that a scene that
+  // never gets ready (a model that fails to load) does not keep the loader up forever.
+  useEffect(() => {
+    if (isSceneReady || cards.length === 0) {
+      return undefined
+    }
+
+    const waitStartedAt = Date.now()
+
+    const pollTimer = setInterval(() => {
+      const isReady = sceneReadiness.getBlocking()
+      const isTimedOut = Date.now() - waitStartedAt > SCENE_READY_TIMEOUT_MILLISECONDS
+
+      if (isReady || isTimedOut) {
+        logDiagnostic('scene.ready', { isReady, isTimedOut, waitedMilliseconds: Date.now() - waitStartedAt })
+
+        setIsSceneReady(true)
+      }
+    }, SCENE_READY_POLL_MILLISECONDS)
+
+    return () => {
+      clearInterval(pollTimer)
+    }
+  }, [isSceneReady, cards.length, sceneReadiness])
+
   useEffect(
     () => () => {
       clearTimeout(scrollIdleTimer.current)
@@ -174,6 +204,7 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
     errorText: t('catalogue.error'),
     retryLabelText: t('catalogue.retry'),
     isLoadingBoxes,
+    isSceneReady,
     isErrorBoxes,
     cards,
     viewport,

@@ -13,6 +13,12 @@ const mockSetParams = jest.fn()
 
 jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ setParams: mockSetParams }) }))
 
+// A short wait for the scene, so that the timeout case can be tested without waiting 8 s.
+jest.mock('@flows/catalogueFlow/_config/sceneRenderConfig', () => ({
+  ...jest.requireActual<Record<string, unknown>>('@flows/catalogueFlow/_config/sceneRenderConfig'),
+  SCENE_READY_TIMEOUT_MILLISECONDS: 400,
+}))
+
 jest.mock('react-native-gesture-handler', () => ({
   usePanGesture: () => ({}),
   usePinchGesture: () => ({}),
@@ -72,6 +78,42 @@ describe('useCatalogueFacade', () => {
     })
 
     expect(result.current.isLoadingBoxes).toBe(false)
+  })
+
+  it('is not ready until the 3D scene says so, then is', async () => {
+    const { result } = await renderHook(() => useCatalogueFacade(), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(result.current.cards).toHaveLength(BOX_CATALOGUE.length)
+    })
+
+    // The boxes are loaded, but the scene has not reported: still not ready.
+    expect(result.current.isSceneReady).toBe(false)
+
+    await act(() => {
+      result.current.sceneSync.sceneReadiness.setBlocking(true)
+    })
+
+    await waitFor(() => {
+      expect(result.current.isSceneReady).toBe(true)
+    })
+  })
+
+  it('stops waiting for a scene that never gets ready', async () => {
+    const { result } = await renderHook(() => useCatalogueFacade(), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(result.current.cards).toHaveLength(BOX_CATALOGUE.length)
+    })
+
+    expect(result.current.isSceneReady).toBe(false)
+
+    await waitFor(
+      () => {
+        expect(result.current.isSceneReady).toBe(true)
+      },
+      { timeout: 2000 },
+    )
   })
 
   it('keeps the tab bar while the list is shown', async () => {

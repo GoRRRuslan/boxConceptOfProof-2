@@ -42,3 +42,12 @@ export const IS_SHADOWS_ENABLED = true
 // The scene is drawn by WebGPU (Metal on iOS, Vulkan on Android) at the screen's full native resolution: no render scale is needed.
 // With expo-gl (OpenGL ES) the view had to be rendered at 0.37 of the native size on iOS to get anywhere near 60 FPS.
 export const RENDER_RESOLUTION_SCALE = 1
+
+// The list is shown (and the loader taken away) only when the scene is really ready: the model is loaded, every box has popped in,
+// the effects have been warmed up (their pipelines compiled), this many frames have been drawn and the picture has settled for a moment.
+// Without this the loader ended while the tiles were still empty, and the first scroll right after it rattled.
+export const SCENE_READY_MINIMUM_FRAMES = 45
+export const SCENE_READY_SETTLE_MILLISECONDS = 400
+// Never wait longer than this for the scene (a failed model load must not keep the loader forever).
+export const SCENE_READY_TIMEOUT_MILLISECONDS = 8000
+export const SCENE_READY_POLL_MILLISECONDS = 100

@@ -21,7 +21,9 @@ const AURA_DEPTH_BEHIND_BOX = 0.9
 // camera), so no part of them is cut off by the lid or the walls of the box.
 const IN_FRONT_OF_BOX_MODEL_UNITS = 1.3
 const HIDDEN_SCALE = 0.0001
-const WARM_UP_MILLISECONDS = 3500
+// How long hidden effect objects are drawn tiny after the start, so that their pipelines exist before the first opening.
+
+export const WARM_UP_MILLISECONDS = 3500
 const PARKED_HEIGHT = -1000
 
 export interface ISceneEffectObjects {
