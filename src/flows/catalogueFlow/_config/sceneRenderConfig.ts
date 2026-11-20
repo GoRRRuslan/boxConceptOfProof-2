@@ -62,6 +62,7 @@ export type SoftwareSaving =
   | 'lowResolution'
   | 'noClearcoat'
   | 'hideInnerParts'
+  | 'unlitInner'
   | 'lambertMaterial'
   | 'noAura'
   | 'noVignette'
@@ -73,7 +74,7 @@ export type SoftwareSaving =
   | 'noRings'
   | 'noSparks'
 
-const DEFAULT_SOFTWARE_SAVINGS = 'lowResolution,noClearcoat,hideInnerParts,lambertMaterial,noAura,noVignette,oneLight,noToneMapping,noShadows,noDust'
+const DEFAULT_SOFTWARE_SAVINGS = 'lowResolution,noClearcoat,hideInnerParts,unlitInner,lambertMaterial,noAura,noVignette,oneLight,noToneMapping,noShadows,noDust'
 // EXPO_PUBLIC_SOFT_PROFILE (a comma-separated list) replaces the default list: used to measure what each saving is worth.
 const savingsList: string = process.env.EXPO_PUBLIC_SOFT_PROFILE ?? DEFAULT_SOFTWARE_SAVINGS
 const SOFTWARE_SAVINGS = savingsList.split(',').filter(Boolean)

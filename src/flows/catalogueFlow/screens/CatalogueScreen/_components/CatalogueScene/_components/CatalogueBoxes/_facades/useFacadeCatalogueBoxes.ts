@@ -259,12 +259,12 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
     })
 
     // Software GL: parts that cannot be seen while the lid is closed are not drawn (fill rate is all it has). During the warm-up
-    // they are drawn once, so that their shader programs are compiled before the first opening instead of as a hitch of seconds.
+    // they are drawn once (on the first box only: the programs are shared), so that their shader programs are compiled before the first opening instead of as a hitch of seconds.
     if (isSoftwareSaving('hideInnerParts')) {
       const isWarmingUp = tintCache.startedAtMilliseconds === 0 || nowMilliseconds - tintCache.startedAtMilliseconds < SOFTWARE_INNER_WARM_UP_MILLISECONDS
 
       instances.forEach((instance, cardIndex) => {
-        const isOpen = isWarmingUp || (cardIndex === scene.focusedCardIndex && lidProgress > 0)
+        const isOpen = (isWarmingUp && cardIndex === 0) || (cardIndex === scene.focusedCardIndex && lidProgress > 0)
 
         instance.innerParts.forEach(part => {
           part.visible = isOpen

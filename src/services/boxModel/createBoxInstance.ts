@@ -1,6 +1,6 @@
 import { BOX_CENTER_HEIGHT_UNITS } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
 import { isSoftwareSaving } from '@flows/catalogueFlow/_config/sceneRenderConfig'
-import { Group, type Material, Mesh, MeshLambertMaterial, MeshPhysicalMaterial, MeshStandardMaterial, type Object3D } from 'three'
+import { Group, type Material, Mesh, MeshBasicMaterial, MeshLambertMaterial, MeshPhysicalMaterial, MeshStandardMaterial, type Object3D } from 'three'
 
 // Parts of the model (docs/MODEL.md). They are the five top-level nodes of the GLB scene; their node
 // names get a numeric suffix from GLTFLoader when a mesh and a node share a name, so match by prefix.
@@ -195,6 +195,23 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
     const [, lining] = getPrimitiveMeshes(seamPart)
 
     if (lining) innerParts.push(lining)
+  }
+
+  // Software GL: the inside of the box (the cushion alone is 15 000 triangles) is drawn unlit, one flat colour and the texture.
+  if (isSoftwareSaving('unlitInner')) {
+    const cushionAndLid = [cushion, lidPart ? getPrimitiveMeshes(lidPart)[1] : undefined]
+
+    cushionAndLid.forEach(part => {
+      part?.traverse(object => {
+        if (!(object instanceof Mesh) || !(object.material instanceof MeshStandardMaterial)) {
+          return
+        }
+
+        const { color, map, side } = object.material
+
+        object.material = new MeshBasicMaterial({ color, map, side })
+      })
+    })
   }
 
   return { root, lidParts, glowMaterials, seamMaterials, bodyMaterials, innerParts }
