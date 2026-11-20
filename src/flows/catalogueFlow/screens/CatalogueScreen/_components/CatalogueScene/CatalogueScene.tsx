@@ -1,11 +1,11 @@
 import { Canvas } from '@react-three/fiber/native'
 import { useEffect, useMemo, useState } from 'react'
 import { View } from 'react-native'
-import { ACESFilmicToneMapping, type PerspectiveCamera } from 'three'
+import { ACESFilmicToneMapping, NoToneMapping, type PerspectiveCamera } from 'three'
 
 import { FrameMeter } from '@components/FrameMeter'
 import { CAMERA_DISTANCE } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
-import { GPU_SYNC_INTERVAL_FRAMES, IS_ANTIALIASING_ENABLED, IS_SHADOWS_ENABLED, RENDER_RESOLUTION_SCALE, SHADOW_WARMUP_MILLISECONDS, TONE_MAPPING_EXPOSURE } from '@flows/catalogueFlow/_config/sceneRenderConfig'
+import { GPU_SYNC_INTERVAL_FRAMES, IS_ANTIALIASING_ENABLED, isSoftwareSaving, IS_SHADOWS_ENABLED, RENDER_RESOLUTION_SCALE, SHADOW_WARMUP_MILLISECONDS, TONE_MAPPING_EXPOSURE } from '@flows/catalogueFlow/_config/sceneRenderConfig'
 import { computeCameraFieldOfView } from '@flows/catalogueFlow/_facadesLogic/computeCameraFieldOfView'
 import type { ICatalogueCard, ICatalogueSceneSync, ICatalogueViewport } from '@flows/catalogueFlow/_types'
 import { CatalogueBoxes } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/CatalogueBoxes/CatalogueBoxes'
@@ -38,7 +38,7 @@ export const CatalogueScene = ({
   const styles = useMemo(() => makeStyles(RENDER_RESOLUTION_SCALE), [])
   const [isWarmingUp, setIsWarmingUp] = useState<boolean>(true)
   // Shadows are on while a box is inspected and during the warm-up right after the start.
-  const isShadowActive = isInspecting || isWarmingUp
+  const isShadowActive = !isSoftwareSaving('noShadows') && (isInspecting || isWarmingUp)
   const camera = useMemo(
     () => ({ fov: computeCameraFieldOfView(), near: 0.1, far: 60, position: [0, 0, CAMERA_DISTANCE] as [number, number, number] }),
     [],
@@ -72,7 +72,7 @@ export const CatalogueScene = ({
       frameloop="always"
       shadows={IS_SHADOWS_ENABLED && isShadowActive}
       camera={camera}
-      gl={{ alpha: true, antialias: IS_ANTIALIASING_ENABLED, toneMapping: ACESFilmicToneMapping }}
+      gl={{ alpha: true, antialias: IS_ANTIALIASING_ENABLED, toneMapping: isSoftwareSaving('noToneMapping') ? NoToneMapping : ACESFilmicToneMapping }}
       onCreated={handleCreated}
       pointerEvents="none"
       testID="catalogueCanvas"

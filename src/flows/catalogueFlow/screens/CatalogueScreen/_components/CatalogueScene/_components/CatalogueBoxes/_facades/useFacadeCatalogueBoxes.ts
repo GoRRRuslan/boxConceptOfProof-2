@@ -34,6 +34,7 @@ import {
 import type { IOpeningPose } from '@flows/openingFlow/_types'
 import { applySceneEffects } from '@services/sceneEffects/applySceneEffects'
 import { useFacadeSceneEffects } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/CatalogueBoxes/_facades/useFacadeSceneEffects'
+import { SOFTWARE_INNER_WARM_UP_MILLISECONDS, isSoftwareSaving } from '@flows/catalogueFlow/_config/sceneRenderConfig'
 import { type IBoxInstance, createBoxInstance } from '@services/boxModel/createBoxInstance'
 import { EStartupMark, markStartup } from '@services/performance/startupTimeline'
 import { loadBoxModel } from '@services/boxModel/loadBoxModel'
@@ -256,6 +257,20 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
 
       root.scale.setScalar(pose.scale)
     })
+
+    // Software GL: parts that cannot be seen while the lid is closed are not drawn (fill rate is all it has). During the warm-up
+    // they are drawn once, so that their shader programs are compiled before the first opening instead of as a hitch of seconds.
+    if (isSoftwareSaving('hideInnerParts')) {
+      const isWarmingUp = tintCache.startedAtMilliseconds === 0 || nowMilliseconds - tintCache.startedAtMilliseconds < SOFTWARE_INNER_WARM_UP_MILLISECONDS
+
+      instances.forEach((instance, cardIndex) => {
+        const isOpen = isWarmingUp || (cardIndex === scene.focusedCardIndex && lidProgress > 0)
+
+        instance.innerParts.forEach(part => {
+          part.visible = isOpen
+        })
+      })
+    }
 
     // The lid (and its wordmark) of the opened box swings about the hinge pivot.
     const focusedInstance = instances[scene.focusedCardIndex]

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { AdditiveBlending, DoubleSide, Group, Mesh, MeshBasicMaterial } from 'three'
 
+import { isSoftwareSaving } from '@flows/catalogueFlow/_config/sceneRenderConfig'
 import type { ICatalogueCard } from '@flows/catalogueFlow/_types'
 import { BURST_PARTICLE_POOL_SIZE, DUST_POOL_SIZE, RING_POOL_SIZE } from '@flows/openingFlow/_config/effectsConfig'
 import { CAMERA_DISTANCE } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
@@ -62,6 +63,8 @@ export const useFacadeSceneEffects = (cards: ICatalogueCard[], viewportAspect: n
     vignette.renderOrder = VIGNETTE_RENDER_ORDER
 
     vignette.frustumCulled = false
+
+    vignette.visible = !isSoftwareSaving('noVignette')
 
     root.add(vignette)
 

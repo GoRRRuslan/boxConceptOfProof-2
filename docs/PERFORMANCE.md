@@ -22,7 +22,11 @@ Android Emulator MW_Pixel9_API_37, release build, final settings (render scale 1
 | Buy, anticipation, lid, reveal, window | 60 FPS in every window, worst frame 25 ms |
 | Same flow, headless | 52, 60, 59, 60, 60 FPS; one 154 ms hitch at the first lid opening |
 
-iOS Simulator (iPhone 17), release build: **1.4 to 3.9 FPS** in the catalogue and in inspect. The simulator renders OpenGL ES in software (Apple's CPU renderer), so this is not representative of a real iPhone and the 60 FPS target is **not demonstrated on iOS**.
+iOS Simulator (iPhone 17), release build: **60 FPS in the list, in inspect and while the box is bought, with two short dips**, thanks to the *software-renderer profile* (below). Without the profile the Simulator manages 1.4 to 3.9 FPS: it renders OpenGL ES on the CPU (Apple's software renderer), where every shaded pixel costs time. Measured windows (1 s each, in-app meter): list 60; inspect 60 after a 1 to 2 s entry hitch (14 and 23 FPS in the first two windows); buy 60; opening 60 except two windows at 28 and 39 FPS when the prize is revealed. A real iPhone and the Android emulator do not use the profile; real-iPhone FPS is **not measured** (no signing set up on this Mac).
+
+### The software-renderer profile (iOS Simulator only)
+
+`IS_SOFTWARE_RENDERER = Platform.OS === 'ios' && !Device.isDevice` (`sceneRenderConfig.ts`). Only then these savings apply (`isSoftwareSaving`): render scale 0.2, no MSAA, no clear coat, Lambert instead of PBR, one hemisphere light instead of three directional, no tone mapping, no shadows, no aura, no vignette, no dust, and the parts that cannot be seen while the lid is closed are not drawn (they are drawn for the first 3.5 s so their shaders compile before the first opening). The light shaft, the shock waves and the sparks stay on. Findings that led here: `@react-three/fiber/native` always created the GL view with 4 MSAA samples whatever `gl.antialias` says (`patches/@react-three+fiber+9.8.2.patch`, applied by `patch-package` on install); with everything on, the cost is proportional to the number of shaded pixels, so render scale and PBR shading dominate. `EXPO_PUBLIC_SOFT_PROFILE=<comma list>` replaces the default list to measure the worth of each saving.
 
 Not measured: any physical device, any Android GPU other than the emulator's.
 

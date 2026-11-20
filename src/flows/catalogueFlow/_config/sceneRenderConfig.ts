@@ -1,4 +1,9 @@
+import { isDevice } from 'expo-device'
 import { Platform } from 'react-native'
+
+// The iOS Simulator renders OpenGL ES on the CPU (Apple's software renderer): every shaded pixel costs real time, so the scene is made
+// cheaper there (see the savings below). A real iPhone and the Android emulator (host GPU) keep the full look.
+export const IS_SOFTWARE_RENDERER = Platform.OS === 'ios' && !isDevice
 
 // How the shared 3D view is rendered (the same on iOS and Android).
 
@@ -36,7 +41,7 @@ export const SHADOW_NORMAL_BIAS = 0.012
 export const TONE_MAPPING_EXPOSURE = 1.05
 // MSAA samples are requested from expo-gl (4 samples, "antialias: true" on the Canvas). Off on Android: with MSAA the
 // emulator fell to 15 FPS at render scale 0.5; without it the full native resolution holds 60 FPS (docs/PERFORMANCE.md).
-export const IS_ANTIALIASING_ENABLED = Platform.OS !== 'android'
+export const IS_ANTIALIASING_ENABLED = Platform.OS !== 'android' && !IS_SOFTWARE_RENDERER
 
 // Feature switches (documented in docs/ANIMATIONS.md; used to find what a GL driver cannot take).
 export const IS_ENVIRONMENT_ENABLED = false
@@ -50,7 +55,34 @@ export const SHADOW_WARMUP_MILLISECONDS = 4000
 // compositor. expo-gl always renders at the full native resolution (3x on an iPhone), which a
 // JS-driven scene with real-time shadows cannot fill at 60 FPS (not verified on a real iPhone: the iOS Simulator
 // uses software GL). Android renders at full native resolution (1): without MSAA it holds 60 FPS.
-export const RENDER_RESOLUTION_SCALE = Platform.OS === 'android' ? 1 : 0.37
+
+// Savings applied on the software renderer only.
+
+export type SoftwareSaving =
+  | 'lowResolution'
+  | 'noClearcoat'
+  | 'hideInnerParts'
+  | 'lambertMaterial'
+  | 'noAura'
+  | 'noVignette'
+  | 'oneLight'
+  | 'noToneMapping'
+  | 'noShadows'
+  | 'noDust'
+  | 'noShaft'
+  | 'noRings'
+  | 'noSparks'
+
+const DEFAULT_SOFTWARE_SAVINGS = 'lowResolution,noClearcoat,hideInnerParts,lambertMaterial,noAura,noVignette,oneLight,noToneMapping,noShadows,noDust'
+// EXPO_PUBLIC_SOFT_PROFILE (a comma-separated list) replaces the default list: used to measure what each saving is worth.
+const savingsList: string = process.env.EXPO_PUBLIC_SOFT_PROFILE ?? DEFAULT_SOFTWARE_SAVINGS
+const SOFTWARE_SAVINGS = savingsList.split(',').filter(Boolean)
+
+export const isSoftwareSaving = (saving: SoftwareSaving): boolean => IS_SOFTWARE_RENDERER && SOFTWARE_SAVINGS.includes(saving)
+
+// The inner parts are drawn this long after the start so that their shader programs are compiled.
+export const SOFTWARE_INNER_WARM_UP_MILLISECONDS = 3500
+export const RENDER_RESOLUTION_SCALE = Platform.OS === 'android' ? 1 : isSoftwareSaving('lowResolution') ? 0.2 : 0.37
 
 // A GPU sync point (a one-pixel read-back) after every Nth frame: back-pressure for the JS frame loop,
 // see services/gpuSync/installGpuSync.ts. 0 = never.

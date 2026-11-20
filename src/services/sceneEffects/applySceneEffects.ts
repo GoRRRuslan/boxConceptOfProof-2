@@ -13,6 +13,7 @@ import {
   getRarityProfile,
   transformModelPoint,
 } from '@flows/openingFlow/_facadesLogic/computeSceneEffects'
+import { isSoftwareSaving } from '@flows/catalogueFlow/_config/sceneRenderConfig'
 import type { IOpeningPose, IOpeningSceneState } from '@flows/openingFlow/_types'
 
 // How far behind its box (in model units) the aura sits.
@@ -99,6 +100,13 @@ export const applySceneEffects = (
     const alpha = pose.isVisible ? computeAuraAlpha(isFocused, focusProgress, seamIntensity, popElapsed) * (isFocused ? 1 - tuckProgress : 1) : 0
     const diameter = pose.scale * BOX_WIDTH_UNITS * AURA_SCALE
     const material = aura.material as MeshBasicMaterial
+
+    if (isSoftwareSaving('noAura')) {
+      aura.visible = false
+
+      return
+    }
+
     const [red, green, blue] = isFocused && isArmed ? [glowRed, glowGreen, glowBlue] : auraColors[cardIndex]
 
     place(aura, isFocused ? shakeX : 0, pose.translateY, pose.translateZ - AURA_DEPTH_BEHIND_BOX * pose.scale, alpha > 0 ? diameter : 0, diameter, 1, isWarmingUp)
@@ -159,6 +167,12 @@ export const applySceneEffects = (
   const dustVisibility = focusProgress * (1 - tuckProgress) * (popElapsed >= 0 ? Math.max(0, 1 - popElapsed / 400) : 1)
 
   effects.dust.forEach((mote, index) => {
+    if (isSoftwareSaving('noDust')) {
+      mote.visible = false
+
+      return
+    }
+
     const point = computeDustPoint(index, nowMilliseconds, anticipation, dustVisibility)
 
     place(
@@ -196,4 +210,10 @@ export const applySceneEffects = (
 
     material.opacity = ring.alpha
   })
+
+    if (isSoftwareSaving('noShaft')) effects.shaft.visible = false
+
+  if (isSoftwareSaving('noRings')) effects.rings.forEach(mesh => { mesh.visible = false })
+
+  if (isSoftwareSaving('noSparks')) effects.sparks.forEach(mesh => { mesh.visible = false })
 }

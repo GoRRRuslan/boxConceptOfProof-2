@@ -1,5 +1,6 @@
 import { BOX_CENTER_HEIGHT_UNITS } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
-import { Group, type Material, Mesh, MeshPhysicalMaterial, MeshStandardMaterial, type Object3D } from 'three'
+import { isSoftwareSaving } from '@flows/catalogueFlow/_config/sceneRenderConfig'
+import { Group, type Material, Mesh, MeshLambertMaterial, MeshPhysicalMaterial, MeshStandardMaterial, type Object3D } from 'three'
 
 // Parts of the model (docs/MODEL.md). They are the five top-level nodes of the GLB scene; their node
 // names get a numeric suffix from GLTFLoader when a mesh and a node share a name, so match by prefix.
@@ -30,6 +31,8 @@ export interface IBoxInstance {
   seamMaterials: MeshStandardMaterial[]
   // The outer body (base and lid): its colour shimmers on the glossy boxes (iridescence).
   bodyMaterials: MeshPhysicalMaterial[]
+  // Parts that can only be seen when the lid is open (the cushion, the inside of the lid, the lining of the seam).
+  innerParts: Object3D[]
 }
 
 // The mesh of every primitive of a part: a one-primitive part is a Mesh, a part with several
@@ -79,6 +82,7 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
   const glowMaterials: MeshStandardMaterial[] = []
   const seamMaterials: MeshStandardMaterial[] = []
   const bodyMaterials: MeshPhysicalMaterial[] = []
+  const innerParts: Object3D[] = []
 
   for (const { partName, primitiveIndex } of BODY_TARGETS) {
     const part = findPart(model, partName)
@@ -96,7 +100,7 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
 
     material.metalness = look.metallic
 
-    material.clearcoat = look.clearCoat
+    material.clearcoat = isSoftwareSaving('noClearcoat') ? 0 : look.clearCoat
 
     // The thin rim of the lid, the outer and the inner surfaces nearly coincide: pull the outer one
     // slightly towards the camera so the two do not fight (dashed edges otherwise).
@@ -105,6 +109,16 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
     material.polygonOffsetFactor = -1
 
     material.polygonOffsetUnits = -1
+
+    if (isSoftwareSaving('lambertMaterial')) {
+      const lambert = new MeshLambertMaterial({ color: material.color, map: material.map })
+
+      mesh.material = lambert
+
+      bodyMaterials.push(lambert as unknown as MeshPhysicalMaterial)
+
+      continue
+    }
 
     mesh.material = material
 
@@ -165,5 +179,23 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
     return part ? [part] : []
   })
 
-  return { root, lidParts, glowMaterials, seamMaterials, bodyMaterials }
+  const cushion = findPart(model, EBoxPartName.Cushion)
+  const lidPart = findPart(model, EBoxPartName.Lid)
+  const seamPart = findPart(model, EBoxPartName.Seam)
+
+  if (cushion) innerParts.push(cushion)
+
+  if (lidPart) {
+    const [, inner] = getPrimitiveMeshes(lidPart)
+
+    if (inner) innerParts.push(inner)
+  }
+
+  if (seamPart) {
+    const [, lining] = getPrimitiveMeshes(seamPart)
+
+    if (lining) innerParts.push(lining)
+  }
+
+  return { root, lidParts, glowMaterials, seamMaterials, bodyMaterials, innerParts }
 }
