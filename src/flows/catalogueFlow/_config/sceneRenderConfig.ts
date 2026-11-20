@@ -68,13 +68,14 @@ export type SoftwareSaving =
   | 'noVignette'
   | 'oneLight'
   | 'noToneMapping'
+  | 'cheapColorOutput'
   | 'noShadows'
   | 'noDust'
   | 'noShaft'
   | 'noRings'
   | 'noSparks'
 
-const DEFAULT_SOFTWARE_SAVINGS = 'lowResolution,noClearcoat,hideInnerParts,unlitInner,lambertMaterial,noAura,noVignette,oneLight,noToneMapping,noShadows,noDust'
+const DEFAULT_SOFTWARE_SAVINGS = 'lowResolution,noClearcoat,hideInnerParts,unlitInner,lambertMaterial,noAura,noVignette,oneLight,noToneMapping,cheapColorOutput,noShadows,noDust'
 // EXPO_PUBLIC_SOFT_PROFILE (a comma-separated list) replaces the default list: used to measure what each saving is worth.
 const savingsList: string = process.env.EXPO_PUBLIC_SOFT_PROFILE ?? DEFAULT_SOFTWARE_SAVINGS
 const SOFTWARE_SAVINGS = savingsList.split(',').filter(Boolean)
@@ -83,8 +84,8 @@ export const isSoftwareSaving = (saving: SoftwareSaving): boolean => IS_SOFTWARE
 
 // The inner parts are drawn this long after the start so that their shader programs are compiled.
 export const SOFTWARE_INNER_WARM_UP_MILLISECONDS = 3500
-// Render scale on the software renderer: 0.2 gave jagged edges, 0.6 only 37 FPS; 0.4 holds 60 FPS with smoother edges (EXPO_PUBLIC_SOFT_SCALE overrides it for measuring).
-const SOFTWARE_RENDER_RESOLUTION_SCALE = Number(process.env.EXPO_PUBLIC_SOFT_SCALE ?? 0.4)
+// Render scale on the software renderer: 0.2 gave jagged edges; with the cheap colour output 0.5 holds 60 FPS, 0.65 only about 40 (EXPO_PUBLIC_SOFT_SCALE overrides it for measuring).
+const SOFTWARE_RENDER_RESOLUTION_SCALE = Number(process.env.EXPO_PUBLIC_SOFT_SCALE ?? 0.5)
 
 export const RENDER_RESOLUTION_SCALE = Platform.OS === 'android' ? 1 : isSoftwareSaving('lowResolution') ? SOFTWARE_RENDER_RESOLUTION_SCALE : 0.37
 

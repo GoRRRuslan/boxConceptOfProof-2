@@ -6,6 +6,7 @@ import { ACESFilmicToneMapping, NoToneMapping, type PerspectiveCamera } from 'th
 import { FrameMeter } from '@components/FrameMeter'
 import { CAMERA_DISTANCE } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
 import { GPU_SYNC_INTERVAL_FRAMES, IS_ANTIALIASING_ENABLED, isSoftwareSaving, IS_SHADOWS_ENABLED, RENDER_RESOLUTION_SCALE, SHADOW_WARMUP_MILLISECONDS, TONE_MAPPING_EXPOSURE } from '@flows/catalogueFlow/_config/sceneRenderConfig'
+import { installCheapColorOutput } from '@services/softwareRenderer/installCheapColorOutput'
 import { computeCameraFieldOfView } from '@flows/catalogueFlow/_facadesLogic/computeCameraFieldOfView'
 import type { ICatalogueCard, ICatalogueSceneSync, ICatalogueViewport } from '@flows/catalogueFlow/_types'
 import { CatalogueBoxes } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/CatalogueBoxes/CatalogueBoxes'
@@ -13,6 +14,11 @@ import { SceneLighting } from '@flows/catalogueFlow/screens/CatalogueScreen/_com
 import { makeStyles } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/CatalogueScene.styles'
 import { installGpuSync } from '@services/gpuSync/installGpuSync'
 import type { IOpeningPhaseKey } from '@flows/openingFlow/_types'
+
+// Must happen before the first shader is compiled.
+if (isSoftwareSaving('cheapColorOutput')) {
+  installCheapColorOutput()
+}
 
 interface ICatalogueSceneProps {
   cards: ICatalogueCard[]
