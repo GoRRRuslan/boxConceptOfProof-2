@@ -36,6 +36,7 @@ import {
   stepScrollVelocity,
 } from '@flows/openingFlow/_facadesLogic/computeSceneEffects'
 import type { IOpeningPose } from '@flows/openingFlow/_types'
+import { logDiagnostic } from '@services/performance/diagnosticLog'
 import { WARM_UP_MILLISECONDS as SCENE_EFFECTS_WARM_UP_MILLISECONDS, applySceneEffects } from '@services/sceneEffects/applySceneEffects'
 import { useFacadeSceneEffects } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/CatalogueBoxes/_facades/useFacadeSceneEffects'
 import { type IBoxInstance, createBoxInstance } from '@services/boxModel/createBoxInstance'
@@ -51,6 +52,8 @@ interface IUseFacadeCatalogueBoxesParams {
 
 type TModelState = 'loading' | 'loaded' | 'error'
 
+// Diagnostics: how often the scene reports what it shows.
+const SCENE_STATE_LOG_INTERVAL_MILLISECONDS = 1000
 const MAXIMUM_FRAME_SECONDS = 0.05
 const PARKED_HEIGHT = -1000
 // Smaller than this the box is invisible anyway; hiding it avoids a singular matrix.
@@ -71,6 +74,7 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
 
   // -------------------------- Values ------------------------- //
   const entranceStartedAt = useRef<number>(ENTRANCE_NOT_STARTED)
+  const lastSceneLogAt = useRef<number>(0)
   // Frames drawn since the entrance started: the scene is ready (and says so) only after enough of them.
   const framesSinceEntrance = useRef<number>(0)
   // Last glow strength written to the boxes (so a material is only touched when the strength really changes).
@@ -331,6 +335,20 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
 
         lastSeamIntensity.current = seamIntensity
       }
+    }
+
+    // Diagnostics: once a second, what the scene believes it shows (how many boxes are visible and how big the first one is).
+    if (nowMilliseconds - lastSceneLogAt.current > SCENE_STATE_LOG_INTERVAL_MILLISECONDS) {
+      lastSceneLogAt.current = nowMilliseconds
+
+      logDiagnostic('scene.boxes', {
+        visible: poses.filter(pose => pose.isVisible && pose.scale > MINIMUM_VISIBLE_SCALE).length,
+        firstScale: Math.round((poses[0]?.scale ?? 0) * 1000) / 1000,
+        focusedCardIndex: scene.focusedCardIndex,
+        focusProgress: Math.round(focusProgress * 100) / 100,
+        scrollOffset: Math.round(currentScrollOffset),
+        viewport: `${viewportWidth}x${Math.round(viewportHeight)}`,
+      })
     }
 
     applySceneEffects(effects, auraColors, tintCache, { scene, nowMilliseconds, focusProgress, tuckProgress, seamIntensity, poses, focusedPose, shakeX })

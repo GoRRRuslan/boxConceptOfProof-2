@@ -10,6 +10,8 @@ interface IUseFacadeRenderOnDemandParams {
   minimumFrames: number
   maximumMilliseconds: number
   isContinuous: boolean
+  // False while the scene sits on a tab that is not shown (nothing is drawn), true again when the tab comes back (frames are forced).
+  isScreenFocused?: boolean
 }
 
 const FRAME_POLL_INTERVAL_MILLISECONDS = 120
@@ -38,6 +40,7 @@ export const useFacadeRenderOnDemand = ({
   minimumFrames,
   maximumMilliseconds,
   isContinuous,
+  isScreenFocused = true,
 }: IUseFacadeRenderOnDemandParams) => {
   const setFrameloop = useThree(state => state.setFrameloop)
   const invalidate = useThree(state => state.invalidate)
@@ -79,6 +82,14 @@ export const useFacadeRenderOnDemand = ({
 
     quickFrameCount.current = 0
 
+    // A tab that is hidden is not drawn: nothing to render. When it is shown again the surface has lost its last picture (the layer of a
+    // hidden view is discarded), so frames are forced for a whole window, which redraws it.
+    if (!isScreenFocused) {
+      setFrameloop('demand')
+
+      return undefined
+    }
+
     setFrameloop('always')
 
     invalidate()
@@ -112,6 +123,7 @@ export const useFacadeRenderOnDemand = ({
     minimumFrames,
     maximumMilliseconds,
     isContinuous,
+    isScreenFocused,
     foregroundResyncCount,
   ])
 }

@@ -51,3 +51,9 @@ export const SCENE_READY_SETTLE_MILLISECONDS = 400
 // Never wait longer than this for the scene (a failed model load must not keep the loader forever).
 export const SCENE_READY_TIMEOUT_MILLISECONDS = 8000
 export const SCENE_READY_POLL_MILLISECONDS = 100
+
+// After the last activity (scroll, finger, animation) the renderer keeps drawing this long before it rests. Resting after 0.7 s made every
+// scroll that began after a short pause start the renderer again, and its first frames take 130 to 570 ms on a device: the list moved while
+// the boxes stood still and then jumped. A longer hold means a restart only after a real pause. (The cap is the safety limit.)
+export const IDLE_RENDER_HOLD_MILLISECONDS = 12_000
+export const IDLE_RENDER_MAXIMUM_MILLISECONDS = 20_000

@@ -1,5 +1,5 @@
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
-import { useNavigation } from '@react-navigation/native'
+import { useIsFocused, useNavigation } from '@react-navigation/native'
 import type { FlashListRef } from '@shopify/flash-list'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -8,7 +8,7 @@ import { createSharedValue } from '@services/sceneSync/createSharedValue'
 
 import { CARD_HEIGHT, LIST_TOP_PADDING } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
 import { SCENE_READY_POLL_MILLISECONDS, SCENE_READY_TIMEOUT_MILLISECONDS } from '@flows/catalogueFlow/_config/sceneRenderConfig'
-import { logDiagnostic } from '@services/performance/diagnosticLog'
+import { logDiagnostic, startJavaScriptStallMonitor } from '@services/performance/diagnosticLog'
 import { INITIAL_PRESS_STATE, type IPressState, endPress, startPress } from '@flows/catalogueFlow/_facadesLogic/computeCardAnimation'
 import { useAdapterCatalogueCards } from '@flows/catalogueFlow/_adapters/useAdapterCatalogueCards'
 import { useOpeningFacade } from '@flows/openingFlow/_facades/useOpeningFacade'
@@ -40,6 +40,7 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
 
   // ------------------------ Navigation ----------------------- //
   const navigation = useNavigation<BottomTabNavigationProp<TTabParamList, ETabRoute.Catalogue>>()
+  const isScreenFocused = useIsFocused()
 
   // --------------------------- State ------------------------- //
   const [viewport, setViewport] = useState<ICatalogueViewport | null>(null)
@@ -50,6 +51,9 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
   const pressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const listRef = useRef<FlashListRef<ICatalogueCard> | null>(null)
   const scrollIdleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const isScrollingLogged = useRef<boolean>(false)
+  // Diagnostics: when the scroll events of the current gesture arrived.
+  const scrollEventTimestamps = useRef<number[]>([])
 
   // --------------------------- Store ------------------------- //
   const balanceInCents = useStore(state => state.balanceInCents)
@@ -99,11 +103,33 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     scrollOffset.setBlocking(event.nativeEvent.contentOffset.y)
 
+    scrollEventTimestamps.current.push(performance.now())
+
+    if (!isScrollingLogged.current) {
+      isScrollingLogged.current = true
+
+      logDiagnostic('scroll.start', { offset: event.nativeEvent.contentOffset.y })
+    }
+
     setIsScrolling(true)
 
     clearTimeout(scrollIdleTimer.current)
 
     scrollIdleTimer.current = setTimeout(() => {
+      isScrollingLogged.current = false
+
+      const timestamps = scrollEventTimestamps.current
+      const gaps = timestamps.slice(1).map((timestamp, index) => timestamp - timestamps[index]).sort((first, second) => first - second)
+
+      logDiagnostic('scroll.end', {
+        events: timestamps.length,
+        medianGapMilliseconds: Math.round((gaps[Math.floor(gaps.length / 2)] ?? 0) * 10) / 10,
+        p95GapMilliseconds: Math.round((gaps[Math.floor(gaps.length * 0.95)] ?? 0) * 10) / 10,
+        maxGapMilliseconds: Math.round((gaps[gaps.length - 1] ?? 0) * 10) / 10,
+      })
+
+      scrollEventTimestamps.current = []
+
       setIsScrolling(false)
     }, SCROLL_IDLE_MILLISECONDS)
   }
@@ -162,6 +188,27 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
     }
   }, [viewport, cards.length])
 
+  // The Boxes tab coming and going (e.g. a trip to the Collection and back): what the scene does around it is what is looked at.
+  useEffect(() => {
+    const unsubscribeFocus = navigation.addListener('focus', () => {
+      logDiagnostic('tab.focus', { tab: 'catalogue' })
+    })
+    const unsubscribeBlur = navigation.addListener('blur', () => {
+      logDiagnostic('tab.blur', { tab: 'catalogue' })
+    })
+
+    return () => {
+      unsubscribeFocus()
+
+      unsubscribeBlur()
+    }
+  }, [navigation])
+
+  // Diagnostics only (a measurement build): reports every time the JavaScript thread was busy for longer than a frame.
+  useEffect(() => {
+    startJavaScriptStallMonitor()
+  }, [])
+
   // The scene says when it is ready (a flag it sets in its frame loop); this watches for it. The wait is capped, so that a scene that
   // never gets ready (a model that fails to load) does not keep the loader up forever.
   useEffect(() => {
@@ -213,6 +260,7 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
     opening,
     phaseKey: opening.phase,
     isRenderContinuous,
+    isScreenFocused,
     isPerformanceOverlayVisible: IS_PERFORMANCE_OVERLAY_VISIBLE,
     onRenderedFrame,
     renderFrameStats,

@@ -32,6 +32,7 @@ const baseFacade = {
   retryLabelText: 'Try again',
   isLoadingBoxes: false,
   isSceneReady: true,
+  isScreenFocused: true,
   isErrorBoxes: false,
   cards: [
     {

@@ -8,6 +8,7 @@ interface IRenderOnDemandProps {
   minimumFrames?: number
   maximumMilliseconds?: number
   isContinuous?: boolean
+  isScreenFocused?: boolean
 }
 
 // Renders nothing; place it inside a <Canvas>. Keeps the renderer running only while the
@@ -20,6 +21,7 @@ export const RenderOnDemand = ({
   minimumFrames = 12,
   maximumMilliseconds = 10_000,
   isContinuous = false,
+  isScreenFocused = true,
 }: IRenderOnDemandProps) => {
   useFacadeRenderOnDemand({
     activityKey,
@@ -29,6 +31,7 @@ export const RenderOnDemand = ({
     minimumFrames,
     maximumMilliseconds,
     isContinuous,
+    isScreenFocused,
   })
 
   return null

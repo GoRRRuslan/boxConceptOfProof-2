@@ -67,6 +67,8 @@ export interface ICatalogueFacade {
   phaseKey: IOpeningPhaseKey
   // True while anything moves (scroll, drag, opening): the renderer must keep drawing.
   isRenderContinuous: boolean
+  // False while the Boxes tab is not shown: the 3D scene is not drawn then, and must be redrawn when the tab comes back.
+  isScreenFocused: boolean
   isPerformanceOverlayVisible: boolean
   onRenderedFrame: (timestampMilliseconds: number) => void
   renderFrameStats: IRenderFrameStats | null

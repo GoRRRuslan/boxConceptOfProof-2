@@ -4,6 +4,8 @@ import { PixelRatio, type LayoutChangeEvent, type StyleProp, type ViewStyle } fr
 import { Canvas, type CanvasRef, type NativeCanvas, type RNCanvasContext } from 'react-native-webgpu'
 import * as THREE from 'three/webgpu'
 
+import { logDiagnostic } from '@services/performance/diagnosticLog'
+
 // A react-three-fiber canvas that draws with WebGPU (Dawn: Metal on iOS, Vulkan on Android) through react-native-webgpu,
 // instead of OpenGL ES through expo-gl. The renderer is created here and handed to fiber as `gl`.
 
@@ -73,16 +75,47 @@ interface IWebGpuCanvasProps {
   isShadowEnabled: boolean
   toneMapping: THREE.ToneMapping
   onCreated?: (state: { gl: THREE.WebGPURenderer; camera: unknown }) => void
+  // False while the screen with the canvas is hidden (another tab): when it is shown again the surface is refreshed.
+  isScreenFocused?: boolean
   testID?: string
 }
 
-export const WebGpuCanvas = ({ children, style, camera, isAntialiased, isShadowEnabled, toneMapping, onCreated, testID }: IWebGpuCanvasProps) => {
+export const WebGpuCanvas = ({
+  children,
+  style,
+  camera,
+  isAntialiased,
+  isShadowEnabled,
+  toneMapping,
+  onCreated,
+  isScreenFocused = true,
+  testID,
+}: IWebGpuCanvasProps) => {
   const canvasRef = useRef<CanvasRef>(null)
   const rootRef = useRef<ReturnType<typeof createRoot> | null>(null)
   const childrenRef = useRef<ReactNode>(children)
   const [hasLayout, setHasLayout] = useState<boolean>(false)
+  // A native canvas whose view was hidden (another tab) does not show what is drawn into it when the view comes back: the picture stays
+  // empty although frames are rendered and presented (reproduced: Boxes, Collection, Boxes). So when the screen comes back the canvas is
+  // created again (a new native view, a new renderer): `surfaceKey` is the identity of the native canvas.
+  const [surfaceKey, setSurfaceKey] = useState<number>(0)
+  const [previousIsScreenFocused, setPreviousIsScreenFocused] = useState<boolean>(isScreenFocused)
+
+  if (isScreenFocused !== previousIsScreenFocused) {
+    setPreviousIsScreenFocused(isScreenFocused)
+
+    if (isScreenFocused) {
+      logDiagnostic('canvas.recreate')
+
+      setSurfaceKey(previous => previous + 1)
+
+      setHasLayout(false)
+    }
+  }
 
   const handleLayout = (event: LayoutChangeEvent) => {
+    logDiagnostic('canvas.layout', { width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })
+
     if (event.nativeEvent.layout.width > 0 && event.nativeEvent.layout.height > 0) {
       setHasLayout(true)
     }
@@ -109,6 +142,7 @@ export const WebGpuCanvas = ({ children, style, camera, isAntialiased, isShadowE
     nativeCanvas.height = nativeCanvas.clientHeight * PixelRatio.get()
 
     const reactNativeCanvas = new ReactNativeCanvas(nativeCanvas)
+
     const renderer = new THREE.WebGPURenderer({ antialias: isAntialiased, alpha: true, canvas: reactNativeCanvas as never, context: context })
 
     const start = async () => {
@@ -117,6 +151,17 @@ export const WebGpuCanvas = ({ children, style, camera, isAntialiased, isShadowE
       if (isCancelled) {
         return
       }
+
+      // Diagnostics: a GPU device that is lost (or a GPU error) leaves the frame loop running and the screen empty.
+      const gpuDevice = (renderer as unknown as { backend?: { device?: GPUDevice } }).backend?.device
+
+      void gpuDevice?.lost.then(info => {
+        logDiagnostic('webgpu.device.lost', { reason: info.reason, message: info.message })
+      })
+
+      gpuDevice?.addEventListener('uncapturederror', event => {
+        logDiagnostic('webgpu.error', { message: (event).error.message.slice(0, 300) })
+      })
 
       renderer.toneMapping = toneMapping
 
@@ -163,7 +208,7 @@ export const WebGpuCanvas = ({ children, style, camera, isAntialiased, isShadowE
     }
     // The canvas is set up once, when it first has a size.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasLayout])
+  }, [hasLayout, surfaceKey])
 
   useEffect(() => {
     childrenRef.current = children
@@ -175,5 +220,5 @@ export const WebGpuCanvas = ({ children, style, camera, isAntialiased, isShadowE
     extend(THREE as never)
   }, [])
 
-  return <Canvas ref={canvasRef} style={style} onLayout={handleLayout} testID={testID} />
+  return <Canvas key={surfaceKey} ref={canvasRef} style={style} onLayout={handleLayout} testID={testID} />
 }

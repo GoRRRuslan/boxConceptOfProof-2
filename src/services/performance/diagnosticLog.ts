@@ -42,3 +42,29 @@ export const logDiagnostic = (event: string, data: Record<string, unknown> = {})
 export const logDiagnosticFailure = (event: string, error: unknown) => {
   logDiagnostic(event, { error: error instanceof Error ? `${error.name}: ${error.message}` : String(error) })
 }
+
+const STALL_CHECK_INTERVAL_MILLISECONDS = 33
+const STALL_REPORT_THRESHOLD_MILLISECONDS = 45
+let isStallMonitorRunning = false
+
+// Watches the JavaScript thread: a timer that should fire every 33 ms and fires late means the thread was busy (a React render, a
+// layout, a heavy callback) for that long, and everything that waits for it (touches, scroll events, list updates) stood still.
+export const startJavaScriptStallMonitor = () => {
+  if (!DIAGNOSTIC_SINK_URL || isStallMonitorRunning) {
+    return
+  }
+
+  isStallMonitorRunning = true
+
+  let expectedAt = Date.now() + STALL_CHECK_INTERVAL_MILLISECONDS
+
+  setInterval(() => {
+    const lateMilliseconds = Date.now() - expectedAt
+
+    expectedAt = Date.now() + STALL_CHECK_INTERVAL_MILLISECONDS
+
+    if (lateMilliseconds > STALL_REPORT_THRESHOLD_MILLISECONDS - STALL_CHECK_INTERVAL_MILLISECONDS) {
+      logDiagnostic('js.stall', { lateMilliseconds })
+    }
+  }, STALL_CHECK_INTERVAL_MILLISECONDS)
+}

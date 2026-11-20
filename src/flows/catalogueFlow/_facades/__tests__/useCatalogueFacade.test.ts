@@ -11,7 +11,7 @@ import { BOX_CATALOGUE } from '@networking/api/MysteryBoxApi/_mockData/boxCatalo
 
 const mockSetParams = jest.fn()
 
-jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ setParams: mockSetParams }) }))
+jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ setParams: mockSetParams, addListener: () => () => undefined }), useIsFocused: () => true }))
 
 // A short wait for the scene, so that the timeout case can be tested without waiting 8 s.
 jest.mock('@flows/catalogueFlow/_config/sceneRenderConfig', () => ({

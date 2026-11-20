@@ -19,6 +19,7 @@ interface ICatalogueSceneProps {
   sceneSync: ICatalogueSceneSync
   phaseKey: IOpeningPhaseKey
   isRenderContinuous: boolean
+  isScreenFocused: boolean
   onRenderedFrame: (timestampMilliseconds: number) => void
 }
 
@@ -29,6 +30,7 @@ export const CatalogueScene = ({
   sceneSync,
   phaseKey,
   isRenderContinuous,
+  isScreenFocused,
   onRenderedFrame,
 }: ICatalogueSceneProps) => {
   const styles = useMemo(() => makeStyles(RENDER_RESOLUTION_SCALE), [])
@@ -57,6 +59,7 @@ export const CatalogueScene = ({
       isAntialiased={IS_ANTIALIASING_ENABLED}
       toneMapping={ACESFilmicToneMapping}
       onCreated={handleCreated}
+      isScreenFocused={isScreenFocused}
       testID="catalogueCanvas"
     >
       <SceneLighting isShadowActive={isShadowActive} />
@@ -69,6 +72,7 @@ export const CatalogueScene = ({
           sceneSync={sceneSync}
           phaseKey={phaseKey}
           isRenderContinuous={isRenderContinuous}
+          isScreenFocused={isScreenFocused}
         />
       ) : null}
     </WebGpuCanvas>

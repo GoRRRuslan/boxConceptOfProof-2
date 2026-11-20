@@ -37,6 +37,7 @@ const CatalogueScreen = () => {
     opening,
     phaseKey,
     isRenderContinuous,
+    isScreenFocused,
     isPerformanceOverlayVisible,
     onRenderedFrame,
     renderFrameStats,
@@ -67,6 +68,7 @@ const CatalogueScreen = () => {
         sceneSync={sceneSync}
         phaseKey={phaseKey}
         isRenderContinuous={isRenderContinuous}
+        isScreenFocused={isScreenFocused}
         onRenderedFrame={onRenderedFrame}
       />
     </View>
