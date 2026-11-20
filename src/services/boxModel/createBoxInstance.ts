@@ -88,6 +88,14 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
 
     material.clearcoat = look.clearCoat
 
+    // The thin rim of the lid, the outer and the inner surfaces nearly coincide: pull the outer one
+    // slightly towards the camera so the two do not fight (dashed edges otherwise).
+    material.polygonOffset = true
+
+    material.polygonOffsetFactor = -1
+
+    material.polygonOffsetUnits = -1
+
     mesh.material = material
   }
 

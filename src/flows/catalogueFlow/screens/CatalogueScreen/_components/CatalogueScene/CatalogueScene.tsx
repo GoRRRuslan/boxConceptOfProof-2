@@ -12,7 +12,7 @@ import { CatalogueBoxes } from '@flows/catalogueFlow/screens/CatalogueScreen/_co
 import { SceneLighting } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/SceneLighting/SceneLighting'
 import { makeStyles } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/CatalogueScene.styles'
 import { installGpuSync } from '@services/gpuSync/installGpuSync'
-import type { IOpeningPhaseKey } from '@flows/openingFlow/_types'
+import { EOpeningPhase, type IOpeningPhaseKey } from '@flows/openingFlow/_types'
 
 interface ICatalogueSceneProps {
   cards: ICatalogueCard[]
@@ -54,14 +54,14 @@ export const CatalogueScene = ({
     <Canvas
       style={styles.canvas}
       frameloop="always"
-      shadows={IS_SHADOWS_ENABLED}
+      shadows={IS_SHADOWS_ENABLED && phaseKey !== EOpeningPhase.Browsing}
       camera={camera}
       gl={{ alpha: true, antialias: IS_ANTIALIASING_ENABLED, toneMapping: ACESFilmicToneMapping }}
       onCreated={handleCreated}
       pointerEvents="none"
       testID="catalogueCanvas"
     >
-      <SceneLighting />
+      <SceneLighting isShadowActive={phaseKey !== EOpeningPhase.Browsing} />
       <FrameMeter onRenderedFrame={onRenderedFrame} />
       {cards.length > 0 && viewport ? (
         <CatalogueBoxes

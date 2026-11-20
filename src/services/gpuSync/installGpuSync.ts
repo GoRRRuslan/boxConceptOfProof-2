@@ -30,10 +30,22 @@ export const installGpuSync = (renderer: IRenderer, intervalFrames: number): voi
   const render = renderer.render.bind(renderer)
   let frameNumber = 0
 
+  let renderMilliseconds = 0
+
   renderer.render = (...renderArguments) => {
+    const startedAt = performance.now()
+
     render(...renderArguments)
 
+    renderMilliseconds += performance.now() - startedAt
+
     frameNumber += 1
+
+    if (frameNumber % 60 === 0) {
+      console.info(`[render] avg render() ${(renderMilliseconds / 60).toFixed(1)} ms`)
+
+      renderMilliseconds = 0
+    }
 
     if (shouldSyncAfterFrame(frameNumber, intervalFrames)) {
       context.readPixels(0, 0, 1, 1, context.RGBA, context.UNSIGNED_BYTE, pixel)

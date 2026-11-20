@@ -2,7 +2,12 @@ import { IS_SHADOWS_ENABLED, SCENE_LIGHTS, SHADOW_BIAS, SHADOW_FRUSTUM_HALF_SIZE
 import { useFacadeSceneLighting } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/SceneLighting/_facades/useFacadeSceneLighting'
 
 // The light rig (key with shadows, rim, fill) plus the reflection environment.
-export const SceneLighting = () => {
+interface ISceneLightingProps {
+  // Shadows cost a second depth pass: they are drawn only while a box is inspected, not in the list.
+  isShadowActive: boolean
+}
+
+export const SceneLighting = ({ isShadowActive }: ISceneLightingProps) => {
   useFacadeSceneLighting()
 
   return (
@@ -13,7 +18,7 @@ export const SceneLighting = () => {
           position={light.position}
           color={light.colorHex}
           intensity={light.intensity}
-          castShadow={IS_SHADOWS_ENABLED && light.castShadows}
+          castShadow={IS_SHADOWS_ENABLED && isShadowActive && light.castShadows}
           shadow-mapSize={[SHADOW_MAP_SIZE, SHADOW_MAP_SIZE]}
           shadow-camera-left={-SHADOW_FRUSTUM_HALF_SIZE}
           shadow-camera-right={SHADOW_FRUSTUM_HALF_SIZE}
