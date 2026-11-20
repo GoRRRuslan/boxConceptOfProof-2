@@ -20,6 +20,7 @@ import {
 } from '@flows/openingFlow/_facadesLogic/openingSceneState'
 import { isDragStateAnimating, stepDragInertia } from '@flows/openingFlow/_facadesLogic/stepDragInertia'
 import { type IBoxInstance, createBoxInstance } from '@services/boxModel/createBoxInstance'
+import { EStartupMark, markStartup } from '@services/performance/startupTimeline'
 import { loadBoxModel } from '@services/boxModel/loadBoxModel'
 import { computeLidHingeTransform, LID_FULLY_OPEN_ANGLE_DEGREES } from '@services/lidHinge/computeLidHingeTransform'
 
@@ -85,6 +86,8 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
           setTemplate(loadedModel)
 
           setModelState('loaded')
+
+          markStartup(EStartupMark.ModelLoaded)
         }
       })
       .catch((error: unknown) => {

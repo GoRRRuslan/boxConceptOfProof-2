@@ -16,6 +16,7 @@ import useStore from '@models/mainStorage/_storeConfigured'
 import type { EBoxIdentifier } from '@networking/api/MysteryBoxApi/_types'
 import { ETabRoute, type TTabParamList } from '@navigation/_types'
 import { useGetBoxesQuery } from '@networking/requests/queries/BoxQueries/useGetBoxesQuery'
+import { EStartupMark, markStartup } from '@services/performance/startupTimeline'
 import { useRenderFpsMeter } from '@services/performance/useRenderFpsMeter'
 
 // The list counts as "scrolling" until this long after its last scroll event (covers the fling).
@@ -84,6 +85,8 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
   // ------------------- Handlers -------------------------- //
   const handleListLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout
+
+    markStartup(EStartupMark.ListVisible)
 
     setViewport(previous => (previous?.width === width && previous.height === height ? previous : { width, height }))
   }
