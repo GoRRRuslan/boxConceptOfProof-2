@@ -29,6 +29,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-asset',
+    'react-native-webgpu',
     'expo-audio',
     'expo-font',
     'expo-localization',

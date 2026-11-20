@@ -7058,6 +7058,18 @@ react-native-toast-message@^2.3.3:
   resolved "https://registry.yarnpkg.com/react-native-toast-message/-/react-native-toast-message-2.5.2.tgz#8eac4b28f40d69e1c2db991798ec2435d9fe0bc4"
   integrity sha512-jqCuWO3njXkdKn6Cs+3EI7Wdw1jvg9JCaSgeQ/hrRF83baeElZRicxv5suz3+igjnDPLFYnruUwpluCBYeWO8Q==
 
+react-native-webgpu-dawn@158.0.0:
+  version "158.0.0"
+  resolved "https://registry.yarnpkg.com/react-native-webgpu-dawn/-/react-native-webgpu-dawn-158.0.0.tgz#079cacc8533ab988cad7a64f315771f9c3d5e4f1"
+  integrity sha512-YCobosg4b012wt8GTUN/7xh7ldgnpluKg00hbdIHTfb2HU6GBUB0ZkKjex9uklrYOYKH5Z0WTwG7M5A6bI1b+A==
+
+react-native-webgpu@^0.22.0:
+  version "0.22.0"
+  resolved "https://registry.yarnpkg.com/react-native-webgpu/-/react-native-webgpu-0.22.0.tgz#362176fe8e699cc4554c97c444d78df94f6ca106"
+  integrity sha512-X60RdnArOXOdnEbNWdDd6w5igiwonrzXjKuH6FtQuy3mwlMG+qnSgNFKNwHDaqi+ki3f3Fv4cGnjhWNlyTNdAA==
+  dependencies:
+    react-native-webgpu-dawn "158.0.0"
+
 react-native-worklets@0.13.0:
   version "0.13.0"
   resolved "https://registry.yarnpkg.com/react-native-worklets/-/react-native-worklets-0.13.0.tgz#57f2d3037a1aad338f666c8ac2b4f2327749b975"

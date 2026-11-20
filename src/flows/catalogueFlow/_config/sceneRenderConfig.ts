@@ -84,10 +84,7 @@ export const isSoftwareSaving = (saving: SoftwareSaving): boolean => IS_SOFTWARE
 
 // The inner parts are drawn this long after the start so that their shader programs are compiled.
 export const SOFTWARE_INNER_WARM_UP_MILLISECONDS = 3500
-// Render scale on the software renderer, with MSAA on: 0.25 holds 60 FPS with smooth (a little soft) edges, 0.3 drops to 45-50 FPS, 0.35 to about 35. Without MSAA (EXPO_PUBLIC_SOFT_AA=0) 0.5 holds 60 FPS but the edges are stepped. EXPO_PUBLIC_SOFT_SCALE overrides the scale for measuring.
-const SOFTWARE_RENDER_RESOLUTION_SCALE = Number(process.env.EXPO_PUBLIC_SOFT_SCALE ?? 0.25)
-
-export const RENDER_RESOLUTION_SCALE = Platform.OS === 'android' ? 1 : isSoftwareSaving('lowResolution') ? SOFTWARE_RENDER_RESOLUTION_SCALE : 0.37
+export const RENDER_RESOLUTION_SCALE = 1
 
 // A GPU sync point (a one-pixel read-back) after every Nth frame: back-pressure for the JS frame loop,
 // see services/gpuSync/installGpuSync.ts. 0 = never.
