@@ -10,7 +10,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 // - GLTFLoader.load(): it expects a URL string, the module id is a number.
 // - Embedded textures: GLTFLoader turns them into Blob URLs; @react-three/fiber/native patches Blob
 //   and TextureLoader so these load on iOS and Android.
-export const loadBoxModel = async (moduleIdentifier: number): Promise<Group> => {
+const modelPromiseByModule = new Map<number, Promise<Group>>()
+
+const parseBoxModel = async (moduleIdentifier: number): Promise<Group> => {
   const asset = Asset.fromModule(moduleIdentifier)
 
   await asset.downloadAsync()
@@ -31,4 +33,27 @@ export const loadBoxModel = async (moduleIdentifier: number): Promise<Group> => 
       },
     )
   })
+}
+
+// One load per model for the whole app run: start it with preloadBoxModel() at app start, so the
+// parsed model is ready (or nearly) by the time the 3D scene mounts.
+export const loadBoxModel = (moduleIdentifier: number): Promise<Group> => {
+  const existing = modelPromiseByModule.get(moduleIdentifier)
+
+  if (existing) {
+    return existing
+  }
+
+  const promise = parseBoxModel(moduleIdentifier)
+
+  modelPromiseByModule.set(moduleIdentifier, promise)
+
+  // A failed load may be retried by the next caller.
+  promise.catch(() => modelPromiseByModule.delete(moduleIdentifier))
+
+  return promise
+}
+
+export const preloadBoxModel = (moduleIdentifier: number): void => {
+  loadBoxModel(moduleIdentifier).catch(() => undefined)
 }

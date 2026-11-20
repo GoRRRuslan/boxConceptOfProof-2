@@ -4,5 +4,9 @@ import '@i18next/i18init'
 import { registerRootComponent } from 'expo'
 
 import App from '@app/App'
+import boxModelSource from '@assets/models/box.glb'
+import { preloadBoxModel } from '@services/boxModel/loadBoxModel'
+
+preloadBoxModel(boxModelSource)
 
 registerRootComponent(App)
