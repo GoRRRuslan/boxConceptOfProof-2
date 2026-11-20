@@ -35,7 +35,7 @@ const MAXIMUM_FRAME_SECONDS = 0.05
 const PARKED_HEIGHT = -1000
 // Smaller than this the box is invisible anyway; hiding it avoids a singular matrix.
 const MINIMUM_VISIBLE_SCALE = 0.0005
-// Before the model is loaded the entrance has not started: the boxes are invisible until it does.
+// Before the first frame with boxes the entrance has not started: the boxes are invisible until it does.
 const ENTRANCE_NOT_STARTED = Number.MAX_SAFE_INTEGER
 
 // One GLB loaded once, one instance per card. Every frame (React Three Fiber's `useFrame`, on the JS
@@ -100,13 +100,6 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
     }
   }, [])
 
-  // The entrance (boxes popping in one after the other) starts the moment the model is ready.
-  useEffect(() => {
-    if (modelState === 'loaded') {
-      entranceStartedAt.current = Date.now()
-    }
-  }, [modelState])
-
   // Runs right before every rendered frame.
   useFrame((_, deltaSecondsRaw) => {
     if (viewportHeight === 0 || instances.length === 0) {
@@ -114,6 +107,7 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
     }
 
     const nowMilliseconds = Date.now()
+
     const deltaSeconds = Math.min(deltaSecondsRaw, MAXIMUM_FRAME_SECONDS)
     const scene = openingScene.getBlocking()
     const currentScrollOffset = scrollOffset.getBlocking()

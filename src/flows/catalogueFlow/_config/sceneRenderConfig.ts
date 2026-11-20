@@ -34,3 +34,16 @@ export const SHADOW_NORMAL_BIAS = 0.012
 export const TONE_MAPPING_EXPOSURE = 1.05
 // MSAA samples are requested from expo-gl (4 samples, "antialias: true" on the Canvas).
 export const IS_ANTIALIASING_ENABLED = true
+
+// Feature switches (documented in docs/ANIMATIONS.md; used to find what a GL driver cannot take).
+export const IS_ENVIRONMENT_ENABLED = false
+export const IS_SHADOWS_ENABLED = false
+
+// The GL view is rendered at this fraction of the screen's native pixel size and scaled up by the
+// compositor. expo-gl always renders at the full native resolution (3x on an iPhone), which a
+// JS-driven scene with real-time shadows cannot fill at 60 FPS.
+export const RENDER_RESOLUTION_SCALE = 0.5
+
+// A GPU sync point (a one-pixel read-back) after every Nth frame: back-pressure for the JS frame loop,
+// see services/gpuSync/installGpuSync.ts. 0 = never.
+export const GPU_SYNC_INTERVAL_FRAMES = 1

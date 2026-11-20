@@ -1,15 +1,17 @@
 import { Canvas } from '@react-three/fiber/native'
 import { useMemo } from 'react'
+import { View } from 'react-native'
 import { ACESFilmicToneMapping, type PerspectiveCamera } from 'three'
 
 import { FrameMeter } from '@components/FrameMeter'
 import { CAMERA_DISTANCE } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
-import { IS_ANTIALIASING_ENABLED, TONE_MAPPING_EXPOSURE } from '@flows/catalogueFlow/_config/sceneRenderConfig'
+import { GPU_SYNC_INTERVAL_FRAMES, IS_ANTIALIASING_ENABLED, IS_SHADOWS_ENABLED, RENDER_RESOLUTION_SCALE, TONE_MAPPING_EXPOSURE } from '@flows/catalogueFlow/_config/sceneRenderConfig'
 import { computeCameraFieldOfView } from '@flows/catalogueFlow/_facadesLogic/computeCameraFieldOfView'
 import type { ICatalogueCard, ICatalogueSceneSync, ICatalogueViewport } from '@flows/catalogueFlow/_types'
 import { CatalogueBoxes } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/CatalogueBoxes/CatalogueBoxes'
 import { SceneLighting } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/SceneLighting/SceneLighting'
 import { makeStyles } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/CatalogueScene.styles'
+import { installGpuSync } from '@services/gpuSync/installGpuSync'
 import type { IOpeningPhaseKey } from '@flows/openingFlow/_types'
 
 interface ICatalogueSceneProps {
@@ -30,26 +32,29 @@ export const CatalogueScene = ({
   isRenderContinuous,
   onRenderedFrame,
 }: ICatalogueSceneProps) => {
-  const styles = useMemo(() => makeStyles(), [])
+  const styles = useMemo(() => makeStyles(RENDER_RESOLUTION_SCALE), [])
   const camera = useMemo(
     () => ({ fov: computeCameraFieldOfView(), near: 0.1, far: 60, position: [0, 0, CAMERA_DISTANCE] as [number, number, number] }),
     [],
   )
 
-  const handleCreated = (state: { gl: { setClearColor: (color: number, alpha: number) => void; toneMappingExposure: number }; camera: unknown }) => {
+  const handleCreated = (state: { gl: Parameters<typeof installGpuSync>[0] & { setClearColor: (color: number, alpha: number) => void; toneMappingExposure: number }; camera: unknown }) => {
     // Transparent: the list's cards and the app background show through.
     state.gl.setClearColor(0x000000, 0)
 
     state.gl.toneMappingExposure = TONE_MAPPING_EXPOSURE
 
+    installGpuSync(state.gl, GPU_SYNC_INTERVAL_FRAMES)
+
     ;(state.camera as PerspectiveCamera).lookAt(0, 0, 0)
   }
 
   return (
+    <View style={styles.scaledLayer}>
     <Canvas
       style={styles.canvas}
       frameloop="always"
-      shadows
+      shadows={IS_SHADOWS_ENABLED}
       camera={camera}
       gl={{ alpha: true, antialias: IS_ANTIALIASING_ENABLED, toneMapping: ACESFilmicToneMapping }}
       onCreated={handleCreated}
@@ -69,5 +74,6 @@ export const CatalogueScene = ({
         />
       ) : null}
     </Canvas>
+    </View>
   )
 }

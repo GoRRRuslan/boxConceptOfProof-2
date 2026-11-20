@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { PMREMGenerator, type Scene, type WebGLRenderer } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
-import { ENVIRONMENT_INTENSITY } from '@flows/catalogueFlow/_config/sceneRenderConfig'
+import { ENVIRONMENT_INTENSITY, IS_ENVIRONMENT_ENABLED } from '@flows/catalogueFlow/_config/sceneRenderConfig'
 
 // Builds the reflection environment (a procedural "room" filtered into a PMREM cube map) and makes it
 // the scene's environment. If the device cannot build it the scene is simply lit by the directional
@@ -38,5 +38,5 @@ export const useFacadeSceneLighting = () => {
   const scene = useThree(state => state.scene)
 
   // ------------------- Side effects ----------------------- //
-  useEffect(() => applyEnvironment(renderer, scene), [renderer, scene])
+  useEffect(() => (IS_ENVIRONMENT_ENABLED ? applyEnvironment(renderer, scene) : undefined), [renderer, scene])
 }
