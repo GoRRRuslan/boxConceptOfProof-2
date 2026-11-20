@@ -43,5 +43,5 @@ Android Emulator MW_Pixel9_API_37 (60 FPS) and iOS Simulator iPhone 17 (software
 
 - iOS Simulator is far below 60 FPS because of its software GL (not measurable on a device here); the iOS flow was only partly walked.
 - No AO, no bloom; no reflection environment (flag, too slow in software GL and on the emulator); shadows only while a box is inspected.
-- Low render resolution (0.37) makes edges soft and the open lid shows thin dashed edges (`android-4c-lid-open-glow.png`); a polygon offset on the body did not remove them.
+- (Before the full-resolution change, see PERFORMANCE.md.) Low render resolution (0.37) made edges soft and the open lid showed thin dashed edges (`android-4c-lid-open-glow.png`); a polygon offset on the body did not remove them. Android now renders at full resolution without MSAA.
 - The glow is an emissive colour only.

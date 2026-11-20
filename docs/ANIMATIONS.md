@@ -12,7 +12,7 @@ All timings, easings, numbers and the gesture behaviour are the same code and th
 | Lights | 3 directional lights in lux + IBL | 3 directional lights (key, rim, fill), intensities tuned by eye; reflection environment (PMREM RoomEnvironment) implemented but OFF (too slow in software GL, untested elsewhere) |
 | Shadows | real shadows | key light, 512 map, rendered only while a box is inspected/opened (60 FPS on the emulator); off in the list |
 | Ambient occlusion, bloom | on | **not implemented** |
-| Anti-aliasing | FXAA + dithering | native MSAA requested; canvas rendered at 0.37 of native resolution and stretched (`RENDER_RESOLUTION_SCALE`) because expo-gl always renders at native pixel density |
+| Anti-aliasing | FXAA + dithering | Android: full native resolution, MSAA off. iOS: native MSAA requested; canvas rendered at 0.37 of native resolution and stretched (`RENDER_RESOLUTION_SCALE`) because expo-gl always renders at native pixel density |
 | Finish by price | material parameters | same values on per-box `MeshPhysicalMaterial` (roughness, metalness, clearcoat) |
 | Model | Draco GLB | uncompressed GLB (Draco needs a WASM worker, not available in React Native) |
 | Entrance | starts when the model is loaded | starts at the first frame with boxes |
