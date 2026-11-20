@@ -41,7 +41,7 @@ export const SHADOW_NORMAL_BIAS = 0.012
 export const TONE_MAPPING_EXPOSURE = 1.05
 // MSAA samples are requested from expo-gl (4 samples, "antialias: true" on the Canvas). Off on Android: with MSAA the
 // emulator fell to 15 FPS at render scale 0.5; without it the full native resolution holds 60 FPS (docs/PERFORMANCE.md).
-export const IS_ANTIALIASING_ENABLED = Platform.OS !== 'android' && !IS_SOFTWARE_RENDERER
+export const IS_ANTIALIASING_ENABLED = Platform.OS !== 'android' && !(IS_SOFTWARE_RENDERER && process.env.EXPO_PUBLIC_SOFT_AA === '0')
 
 // Feature switches (documented in docs/ANIMATIONS.md; used to find what a GL driver cannot take).
 export const IS_ENVIRONMENT_ENABLED = false
@@ -84,8 +84,8 @@ export const isSoftwareSaving = (saving: SoftwareSaving): boolean => IS_SOFTWARE
 
 // The inner parts are drawn this long after the start so that their shader programs are compiled.
 export const SOFTWARE_INNER_WARM_UP_MILLISECONDS = 3500
-// Render scale on the software renderer: 0.2 gave jagged edges; with the cheap colour output 0.5 holds 60 FPS, 0.65 only about 40 (EXPO_PUBLIC_SOFT_SCALE overrides it for measuring).
-const SOFTWARE_RENDER_RESOLUTION_SCALE = Number(process.env.EXPO_PUBLIC_SOFT_SCALE ?? 0.5)
+// Render scale on the software renderer, with MSAA on: 0.25 holds 60 FPS with smooth (a little soft) edges, 0.3 drops to 45-50 FPS, 0.35 to about 35. Without MSAA (EXPO_PUBLIC_SOFT_AA=0) 0.5 holds 60 FPS but the edges are stepped. EXPO_PUBLIC_SOFT_SCALE overrides the scale for measuring.
+const SOFTWARE_RENDER_RESOLUTION_SCALE = Number(process.env.EXPO_PUBLIC_SOFT_SCALE ?? 0.25)
 
 export const RENDER_RESOLUTION_SCALE = Platform.OS === 'android' ? 1 : isSoftwareSaving('lowResolution') ? SOFTWARE_RENDER_RESOLUTION_SCALE : 0.37
 
