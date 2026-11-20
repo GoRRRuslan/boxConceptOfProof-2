@@ -53,6 +53,8 @@ const toPhysicalMaterial = (source: Material): MeshPhysicalMaterial => {
   return physicalMaterial
 }
 
+const SHADOW_CASTING_PARTS: EBoxPartName[] = [EBoxPartName.Base, EBoxPartName.Lid]
+
 // Indices of the primitives used for the body look (outer surface) and for the inner glow.
 interface IPrimitiveTarget {
   partName: EBoxPartName
@@ -139,10 +141,17 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
     seamMaterials.push(material)
   }
 
-  model.traverse(object => {
-    object.castShadow = castShadows
+  // Only the outer shells (base and lid) cast shadows: the cushion alone is 15 000 of the 33 000 triangles of the model, and its shadow
+  // (inside the box, under the lid) cannot be told apart. Every part still receives shadows. This takes more than half of the work
+  // out of the shadow pass.
+  model.children.forEach(part => {
+    const castsShadow = castShadows && SHADOW_CASTING_PARTS.some(partName => part.name.startsWith(partName))
 
-    object.receiveShadow = castShadows
+    part.traverse(object => {
+      object.castShadow = castsShadow
+
+      object.receiveShadow = castShadows
+    })
   })
 
   // The model's base rests at Y = 0: shift it so that the group's origin is the middle of the box.

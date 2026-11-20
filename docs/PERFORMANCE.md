@@ -59,8 +59,9 @@ Measured with the finished app and everything in [EFFECTS.md](EFFECTS.md) switch
 | Platform | Scenario | Result |
 |---|---|---|
 | Android Emulator (headless), release | Catalogue, 35 s of list flings | 60.0 FPS, 32 of 32 windows at 60 or more (lowest 59.9), 0 slow frames, worst frame 21.2 ms |
-| Android Emulator (headless), release | Opening flow (select, turn, buy, open, reveal) | 59.8 FPS, 11 of 12 windows at 59 or more (lowest 59.0), 3 slow frames, worst frame 43.6 ms |
-| iOS Simulator (iPhone 17), release | Catalogue, 60 s auto-scroll | 3.5 FPS: the Simulator draws OpenGL ES with Apple's CPU renderer; 60 FPS needs a real iPhone |
+| Android Emulator (headless), release | Opening flow (select, turn, buy, open, reveal) | **Bistable.** In about half of the runs 59.8 FPS (11 of 12 windows at 59 or more, 3 slow frames); in the other half the opening locks at exactly 30 FPS from the moment the lid starts until Done. The same happens with the code from before all the effects (commit c967080), so it is not caused by them; resolution, shadow casting, the GPU sync interval and the effects themselves were switched off one by one and none of them removes it. CPU is idle during the locked runs; `dumpsys gfxinfo` shows frames of 17-19 ms (just over the 16.7 ms budget). Not solved. |
+| iOS Simulator (iPhone 17), release | Catalogue, 60 s auto-scroll | 3.5 FPS: the Simulator draws OpenGL ES with Apple's CPU renderer (the app uses 160 % CPU); 60 FPS needs a real iPhone |
+| iOS Simulator (iPhone 17), release | Opening flow, final code vs the code before all effects | 8.1 FPS vs 8.4 FPS (lowest windows 1.5 vs 1.4): the effects cost nothing measurable even when every pixel is rasterised on the CPU. **Not measured on a real iPhone** (no signing set up on this Mac). |
 
 What it took to get here: (1) the vignette is drawn **inside** the 3D scene: laid over the GL surface as an image it made Android composite every frame more slowly while the opening screen was up and the opening dropped to 30-39 FPS; (2) shadows are rendered for the first 4 s (during the entrance) and then switched off until a box is inspected, so the shadow shaders are compiled early: the first selection no longer hitches for about 200 ms; (3) the effect meshes are drawn once, tiny and off screen, in the first 3.5 s so their shaders are compiled early.
 
