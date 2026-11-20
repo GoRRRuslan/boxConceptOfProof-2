@@ -2,7 +2,7 @@
 
 A React Native + TypeScript proof of concept: a scrollable catalogue of real-time 3D mystery boxes, buying with a virtual balance through an async mock API, inspecting and opening a live 3D box with an animated reveal, and a session-scoped collection.
 
-This is the **three.js + React Three Fiber + expo-gl** version of the app. The behaviour is the same as the Filament version in `boxConceptOfProof-1`; only the 3D layer was replaced. See [docs/ANIMATIONS.md](docs/ANIMATIONS.md) for every place where look or behaviour differs.
+The 3D layer is **three.js through React Three Fiber on expo-gl**: one GL canvas behind the list, a render loop in JavaScript. Every animation and where it lives is in [docs/ANIMATIONS.md](docs/ANIMATIONS.md); the numbers are in [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 Stack: Expo SDK 58, React Native 0.88, TypeScript strict, Reanimated 4, Zustand, React Query, i18next, three.js, `@react-three/fiber/native`, `expo-gl`. App id `com.gorrr.mysterywatch.r3f`, scheme `mysterywatchr3f`.
 
@@ -14,9 +14,9 @@ Flow-based (`src/flows/<name>Flow/{screens,_facades,_facadesLogic,_adapters,_con
 
 - **One canvas for the whole app** (`CatalogueScene`), one GL context, behind a FlashList of transparent cards. UI overlays are React Native views.
 - `useFacadeCatalogueBoxes` loads `box.glb` once (`services/boxModel/loadBoxModel.ts`), makes one instance per card (`createBoxInstance`: shared geometry, own body and glow materials) and places and animates them in R3F's `useFrame`.
-- The pure maths (`computeBoxPose`, `computeOpeningPose`, `openingSceneState`, `stepDragInertia`, easing, lid hinge) is the same code as in the Filament version.
+- The pure maths (`computeBoxPose`, `computeOpeningPose`, `openingSceneState`, `stepDragInertia`, easing, lid hinge) has no React or three.js in it and is unit tested.
 - Scene state is shared through plain mutable cells (`services/sceneSync/createSharedValue.ts`), written by React (scroll, fingers, sensors) and read in the frame loop.
-- **Where per-frame work runs:** on the JS thread inside `useFrame` (no worklets). Cost per frame is a few transforms for at most ~5 visible boxes, so the JS thread is not the bottleneck; the GPU is (see PERFORMANCE.md).
+- **Where per-frame work runs:** on the JS thread inside `useFrame`. Cost per frame is a few transforms for at most ~5 visible boxes, so the JS thread is not the bottleneck; the GPU is (see PERFORMANCE.md).
 - **Render on demand:** `frameloop` is switched to `always` while something moves and back to `demand` after a run of quick frames (`components/RenderOnDemand`), so the GPU rests on a still screen.
 - **GPU sync** (`services/gpuSync`): a one-pixel read-back after each frame gives the JS loop back-pressure and makes the FPS meter truthful (expo-gl otherwise queues GL commands and JS runs ahead).
 - **Model:** the GLB is uncompressed (no Draco/KTX2: their WASM decoders need Web Workers, which React Native lacks). `scripts/assets/optimizeBoxModel.sh` rebuilds it.

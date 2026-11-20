@@ -20,7 +20,7 @@ Stack: Expo SDK 58 · TypeScript strict · Zustand 5 · React Query 5 · React N
 
 ## Testing rules (details: docs/TESTING.md)
 - Test and measure on **one platform at a time**: the iOS Simulator with the Android Emulator shut down, or the other way round (`xcrun simctl shutdown all` / `adb emu kill`). They share the Mac's GPU and CPU; running both gives false jank and unusable FPS numbers.
-- FPS and "does it feel smooth" only on a **release** build, never on the development client. Benchmark builds (`*RunCatalogueScroll`, `*RunOpening`, `*RunSuite`) are for measuring only.
+- FPS and "does it feel smooth" only on a **release** build, never on the development client. Benchmark builds (`*RunCatalogueScroll`, `*RunOpening`) are for measuring only.
 - After an Android rebuild make sure the new JavaScript is in the app (delete `android/app/build/generated/assets/createBundleReleaseJsAndAssets` and `android/app/build/intermediates/assets/release` if in doubt).
-- Every helper called from a worklet needs the `'worklet'` directive (Jest cannot catch a missing one: check on a device).
+- Every helper called from a Reanimated worklet needs the `'worklet'` directive (Jest cannot catch a missing one: check on a device).
 - Record results where they belong: raw logs in `docs/data`, pictures in `docs/media`, numbers in `docs/PERFORMANCE.md`, cases and bugs in `docs/TEST_CHECKLIST.md`.
