@@ -34,7 +34,7 @@ const config: ExpoConfig = {
     'expo-localization',
     'expo-status-bar',
     'expo-dev-client',
-    ['expo-build-properties', { android: { buildArchs: androidArchitectures } }],
+    ['expo-build-properties', { android: { buildArchs: androidArchitectures, enableMinifyInReleaseBuilds: false } }],
     [
       'expo-splash-screen',
       {
