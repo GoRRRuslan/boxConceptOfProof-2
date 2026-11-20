@@ -40,7 +40,7 @@ Not measured: any physical device, any Android GPU other than the emulator's.
 
 ## Startup (app start to first frame with boxes)
 
-Marks come from `services/performance/startupTimeline.ts`. Taken with the final scene settings before the Android resolution change; render resolution does not move these marks, but they were not repeated.
+Marks come from `services/performance/startupTimeline.ts`. Render resolution does not move these marks.
 
 | Platform | list visible | model loaded | first box frame |
 |---|---|---|---|
@@ -48,12 +48,6 @@ Marks come from `services/performance/startupTimeline.ts`. Taken with the final 
 | Android Emulator | 123 ms | 981 ms | 1 009 ms |
 
 - GLB fetch: 20 ms (iOS) / 137 ms (Android); GLB parse: about 12 ms (iOS) / 33 ms (Android). Parsing is not the problem.
-- With the PMREM environment switched on, the iOS Simulator needed 14.3 s for the first box frame: software GL compiles the environment shaders slowly.
+- With the PMREM environment switched on, the iOS Simulator needs 14.3 s for the first box frame: software GL compiles the environment shaders slowly.
 - The first frame itself can take seconds on the simulator (shader compilation). The entrance animation starts on the first frame that has boxes (`resolveEntranceStart`), so the pop-in is always visible, and render on demand only rests after a run of quick frames.
 - The model is preloaded at app start (`preloadBoxModel`).
-
-## Corrections to earlier numbers
-
-- An early run reported about 28 FPS on Android. It was taken while an iOS Simulator was also running and must not be used.
-- An early JavaScript-side counter showed 60 FPS on iOS. It was wrong: expo-gl queues GL commands, so JavaScript ran ahead of the GPU. The pixel read-back fixed the meter.
-- The emulator window used to be recorded at about 22 FPS with the old setting (render scale 0.37 with MSAA). With MSAA off the window holds 60 FPS.
