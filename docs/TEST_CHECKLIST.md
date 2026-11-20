@@ -5,7 +5,7 @@
 | Check | Result |
 |---|---|
 | `yarn ciPipeline` (eslint + tsc) | clean |
-| `yarn test` | 45 suites, 258 tests pass (domain, purchase, opening phase machine and pose maths, plus tests for createSharedValue, createBoxInstance, computeCameraFieldOfView, installGpuSync, resolveEntranceStart, RenderOnDemand) |
+| `yarn test` | 46 suites, 271 tests pass (domain, purchase, opening phase machine and pose maths, plus tests for createSharedValue, createBoxInstance, computeCameraFieldOfView, installGpuSync, resolveEntranceStart, RenderOnDemand) |
 | Purchase exactly-once, failure paths | unit tests (`runBoxPurchase`, `PurchaseStore`, API tests); also walked on Android, see the failure rows below |
 
 ## Manual, release builds

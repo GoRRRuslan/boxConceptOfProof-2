@@ -54,8 +54,10 @@ The code base follows the conventions of an enterprise React Native app: feature
 - 🏗️ Feature-based (flows) architecture, facades, adapters, typed navigation
 - 🔄 Zustand (session-scoped, no persistence) + React Query over an asynchronous mock API with a failure switch
 - 🧪 Jest + React Native Testing Library, ESLint 9 + Prettier, `ciPipeline`
-- 📦 **No native 3D code and no vendored binaries** — three.js and R3F come from npm, so the project builds on a clean machine
+- 📦 **No native 3D code of our own and nothing vendored** — three.js, R3F and `react-native-webgpu` (with its prebuilt Dawn binaries) come from npm, so the project builds on a clean machine
 - 🌟 A **show around the box**: breathing and flashing seams, a soft light curtain from the open box to the watch, shock waves, sparks, camera punch, lid settle, hold-to-open — bigger for rarer prizes ([docs/EFFECTS.md](docs/EFFECTS.md))
+- 🎨 **One shared colour grade** (more saturation and contrast) applied to the boxes, identical in all three repositories, so the boxes look equally rich everywhere
+- 🧭 A [rendering report](docs/RENDERING_REPORT.md): why expo-gl was dropped for WebGPU, and how this repository compares with the other two
 - ✨ A full set of animations (push-in, anticipation, rarity reveal, gestures, sound) described with screenshots in [docs/ANIMATIONS.md](docs/ANIMATIONS.md)
 - 📊 Reproducible performance tooling and an honest [performance report](docs/PERFORMANCE.md)
 
@@ -65,7 +67,7 @@ The code base follows the conventions of an enterprise React Native app: feature
 |---|---|
 | Framework | Expo SDK 58, React Native 0.88.1 (new architecture), React 19.3 |
 | Language | TypeScript 6.0 (strict) |
-| 3D | `three` 0.187 + `@react-three/fiber` 9 (`/native`) + `react-native-webgpu` (WebGPU, Dawn) |
+| 3D | `three` 0.187 (WebGPU build) + `@react-three/fiber` 9 (`/native`, the React reconciler for the scene) + `react-native-webgpu` (draws with WebGPU through Dawn: Metal / Vulkan). `expo-gl` stays installed only because R3F's native entry imports it for its Blob and texture polyfills: nothing is drawn with it |
 | Animation / gestures | Reanimated 4.7 + `react-native-worklets` 0.13, Gesture Handler 3, Haptics |
 | State | Zustand 5 (client), TanStack Query 5 (mock API) |
 | Navigation | React Navigation 7 (bottom tabs) |
@@ -474,7 +476,7 @@ boxConceptOfProof-2/
 - **Camera and light are fixed;** the opening "push-in" is done by moving and scaling the box.
 - Leaving after buying without opening is allowed — the watch is already in the collection.
 - **Rendering stops on its own:** after a reveal the renderer rests once the opened box has been put away; any change of phase wakes it.
-- **Not covered by tests or checks:** real audio and haptics (only the calls are tested), device tilt (not testable in a simulator), the FPS of the reveal on iOS.
+- **Not covered by tests or checks:** real audio and haptics (only the calls are tested), device tilt (not testable in a simulator), and any physical device (none was measured).
 
 ---
 
