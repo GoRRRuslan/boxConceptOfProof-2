@@ -143,3 +143,48 @@ export const createShaftGeometry = (): BufferGeometry => {
 
   return buildGeometry(positions, alphas, indices)
 }
+
+// A soft dark vignette: a grid over [-1, 1] x [-1, 1] whose alpha is 0 in the middle and darker towards the corners and the edges
+// (black, alpha only). Drawn last over the whole view, inside the 3D scene: an image laid over the GL surface made Android
+// composite every frame more slowly while the opening screen was up.
+const VIGNETTE_COLUMNS = 16
+const VIGNETTE_ROWS = 32
+const VIGNETTE_STRENGTH = 0.55
+
+export const createVignetteGeometry = (): BufferGeometry => {
+  const positions: number[] = []
+  const alphas: number[] = []
+  const indices: number[] = []
+
+  for (let row = 0; row <= VIGNETTE_ROWS; row += 1) {
+    for (let column = 0; column <= VIGNETTE_COLUMNS; column += 1) {
+      const x = (column / VIGNETTE_COLUMNS) * 2 - 1
+      const y = (row / VIGNETTE_ROWS) * 2 - 1
+
+      positions.push(x, y, 0)
+
+      const t = Math.min(1, Math.max(0, (Math.hypot(x, y) - 0.55) / (1.35 - 0.55)))
+
+      alphas.push(VIGNETTE_STRENGTH * t * t * (3 - 2 * t))
+    }
+  }
+
+  for (let row = 0; row < VIGNETTE_ROWS; row += 1) {
+    for (let column = 0; column < VIGNETTE_COLUMNS; column += 1) {
+      const first = row * (VIGNETTE_COLUMNS + 1) + column
+      const second = first + VIGNETTE_COLUMNS + 1
+
+      indices.push(first, first + 1, second + 1, first, second + 1, second)
+    }
+  }
+
+  const geometry = buildGeometry(positions, alphas, indices)
+  const colors = geometry.getAttribute('color')
+
+  // buildGeometry paints white; the vignette is black (only the alpha matters).
+  for (let index = 0; index < colors.count; index += 1) {
+    colors.setXYZ(index, 0, 0, 0)
+  }
+
+  return geometry
+}

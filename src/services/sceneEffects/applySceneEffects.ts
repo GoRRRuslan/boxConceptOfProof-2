@@ -21,6 +21,8 @@ const AURA_DEPTH_BEHIND_BOX = 0.9
 // camera), so no part of them is cut off by the lid or the walls of the box.
 const IN_FRONT_OF_BOX_MODEL_UNITS = 1.3
 const HIDDEN_SCALE = 0.0001
+const WARM_UP_MILLISECONDS = 3500
+const PARKED_HEIGHT = -1000
 
 export interface ISceneEffectObjects {
   sparks: Mesh[]
@@ -45,12 +47,19 @@ export interface ISceneEffectsFrame {
 // What was last written to the materials (the prize tint only changes when the prize does).
 export interface ISceneEffectsTintCache {
   sparkLevel: number
+  // When the first frame was drawn (0 = not yet): for a moment after the start every effect mesh is drawn once, tiny and off
+  // screen, so its shader program is compiled during the entrance and not as a hitch when the lid is let go.
+  startedAtMilliseconds: number
 }
 
-const place = (mesh: Mesh, x: number, y: number, z: number, scaleX: number, scaleY: number, scaleZ: number) => {
-  mesh.visible = scaleX > HIDDEN_SCALE
+const place = (mesh: Mesh, x: number, y: number, z: number, scaleX: number, scaleY: number, scaleZ: number, isWarmingUp: boolean) => {
+  mesh.visible = scaleX > HIDDEN_SCALE || isWarmingUp
 
-  if (mesh.visible) {
+  if (scaleX <= HIDDEN_SCALE && isWarmingUp) {
+    mesh.position.set(0, PARKED_HEIGHT, 0)
+
+    mesh.scale.set(HIDDEN_SCALE, HIDDEN_SCALE, HIDDEN_SCALE)
+  } else if (mesh.visible) {
     mesh.position.set(x, y, z)
 
     mesh.scale.set(scaleX, scaleY, scaleZ)
@@ -65,6 +74,12 @@ export const applySceneEffects = (
   frame: ISceneEffectsFrame,
 ) => {
   const { scene, nowMilliseconds, focusProgress, tuckProgress, seamIntensity, poses, focusedPose, shakeX } = frame
+
+  if (tintCache.startedAtMilliseconds === 0) {
+    tintCache.startedAtMilliseconds = nowMilliseconds
+  }
+
+  const isWarmingUp = nowMilliseconds - tintCache.startedAtMilliseconds < WARM_UP_MILLISECONDS
   const popElapsed = getPopElapsedMilliseconds(scene, nowMilliseconds)
   const anticipation = getAnticipationLinear(scene, nowMilliseconds)
   const isArmed = scene.rarityLevel >= 0
@@ -86,7 +101,7 @@ export const applySceneEffects = (
     const material = aura.material as MeshBasicMaterial
     const [red, green, blue] = isFocused && isArmed ? [glowRed, glowGreen, glowBlue] : auraColors[cardIndex]
 
-    place(aura, isFocused ? shakeX : 0, pose.translateY, pose.translateZ - AURA_DEPTH_BEHIND_BOX * pose.scale, alpha > 0 ? diameter : 0, diameter, 1)
+    place(aura, isFocused ? shakeX : 0, pose.translateY, pose.translateZ - AURA_DEPTH_BEHIND_BOX * pose.scale, alpha > 0 ? diameter : 0, diameter, 1, isWarmingUp)
 
     material.color.setRGB(red, green, blue)
 
@@ -96,7 +111,7 @@ export const applySceneEffects = (
   // Everything below belongs to the focused box.
   if (!focusedPose || scene.focusedCardIndex < 0) {
     [...effects.sparks, ...effects.dust, ...effects.rings, effects.shaft].forEach(mesh => {
-      mesh.visible = false
+      place(mesh, 0, 0, 0, 0, 0, 0, isWarmingUp)
     })
 
     return
@@ -137,6 +152,7 @@ export const applySceneEffects = (
       point.scale * unit,
       point.scale * unit,
       1,
+      isWarmingUp,
     )
   })
 
@@ -153,6 +169,7 @@ export const applySceneEffects = (
       point.scale * unit,
       point.scale * unit,
       1,
+      isWarmingUp,
     )
   })
 
@@ -161,7 +178,7 @@ export const applySceneEffects = (
   const shaftMaterial = effects.shaft.material as MeshBasicMaterial
   const shaftWidth = shaft.scaleX * unit * BOX_WIDTH_UNITS
 
-  place(effects.shaft, mouthX + shakeX, mouthY, mouthZ + IN_FRONT_OF_BOX_MODEL_UNITS * unit, shaft.alpha > 0 ? shaftWidth : 0, shaft.scaleY * unit * BOX_WIDTH_UNITS, shaftWidth)
+  place(effects.shaft, mouthX + shakeX, mouthY, mouthZ + IN_FRONT_OF_BOX_MODEL_UNITS * unit, shaft.alpha > 0 ? shaftWidth : 0, shaft.scaleY * unit * BOX_WIDTH_UNITS, shaftWidth, isWarmingUp)
 
   shaftMaterial.color.setRGB(glowRed * boost, glowGreen * boost, glowBlue * boost)
 
@@ -173,7 +190,7 @@ export const applySceneEffects = (
     const diameter = ring.scale * unit * BOX_WIDTH_UNITS
     const material = ringMesh.material as MeshBasicMaterial
 
-    place(ringMesh, mouthX + shakeX, mouthY, mouthZ + IN_FRONT_OF_BOX_MODEL_UNITS * unit, ring.alpha > 0 ? diameter : 0, diameter, 1)
+    place(ringMesh, mouthX + shakeX, mouthY, mouthZ + IN_FRONT_OF_BOX_MODEL_UNITS * unit, ring.alpha > 0 ? diameter : 0, diameter, 1, isWarmingUp)
 
     material.color.setRGB(glowRed * boost + 0.3, glowGreen * boost + 0.3, glowBlue * boost + 0.3)
 

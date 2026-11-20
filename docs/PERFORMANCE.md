@@ -51,3 +51,17 @@ Marks come from `services/performance/startupTimeline.ts`. Render resolution doe
 - With the PMREM environment switched on, the iOS Simulator needs 14.3 s for the first box frame: software GL compiles the environment shaders slowly.
 - The first frame itself can take seconds on the simulator (shader compilation). The entrance animation starts on the first frame that has boxes (`resolveEntranceStart`), so the pop-in is always visible, and render on demand only rests after a run of quick frames.
 - The model is preloaded at app start (`preloadBoxModel`).
+
+## The show around the box: FPS with every effect on
+
+Measured with the finished app and everything in [EFFECTS.md](EFFECTS.md) switched on, release builds, one platform at a time, with the in-app meter (`EXPO_PUBLIC_SHOW_PERFORMANCE=1`). Android: [`scripts/perf/measureAndroidFlow.sh`](../scripts/perf/measureAndroidFlow.sh) (16 s warm-up, 35 s of list flings, then select, turn, buy, open, reveal, Done). iOS: the list scrolls by itself (`EXPO_PUBLIC_AUTO_SCROLL=1`), the opening is driven by taps; the meter posts to a local collector (`EXPO_PUBLIC_PERF_SINK_URL`).
+
+| Platform | Scenario | Result |
+|---|---|---|
+| Android Emulator (headless), release | Catalogue, 35 s of list flings | 60.0 FPS, 32 of 32 windows at 60 or more (lowest 59.9), 0 slow frames, worst frame 21.2 ms |
+| Android Emulator (headless), release | Opening flow (select, turn, buy, open, reveal) | 59.8 FPS, 11 of 12 windows at 59 or more (lowest 59.0), 3 slow frames, worst frame 43.6 ms |
+| iOS Simulator (iPhone 17), release | Catalogue, 60 s auto-scroll | 3.5 FPS: the Simulator draws OpenGL ES with Apple's CPU renderer; 60 FPS needs a real iPhone |
+
+What it took to get here: (1) the vignette is drawn **inside** the 3D scene: laid over the GL surface as an image it made Android composite every frame more slowly while the opening screen was up and the opening dropped to 30-39 FPS; (2) shadows are rendered for the first 4 s (during the entrance) and then switched off until a box is inspected, so the shadow shaders are compiled early: the first selection no longer hitches for about 200 ms; (3) the effect meshes are drawn once, tiny and off screen, in the first 3.5 s so their shaders are compiled early.
+
+The few slow frames left on Android are single frames (33-50 ms) at the moments when React mounts or unmounts a screen (selecting a box, the reveal, Done): the frame loop shares the main thread with the mount.

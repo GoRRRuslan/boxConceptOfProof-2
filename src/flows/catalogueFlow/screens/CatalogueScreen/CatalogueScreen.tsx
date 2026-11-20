@@ -4,7 +4,6 @@ import { View } from 'react-native'
 
 import { AppText } from '@components/AppText'
 import { FadingView } from '@components/FadingView'
-import { SceneVignette } from '@components/SceneVignette'
 import { ScreenHeader } from '@components/ScreenHeader'
 import { PerformanceOverlay } from '@components/PerformanceOverlay'
 import { EPerformanceOverlayPlacement } from '@components/PerformanceOverlay/_types'
@@ -119,7 +118,6 @@ const CatalogueScreen = () => {
       />
       <View style={styles.listRegion} onLayout={handleListLayout}>
         {renderScene()}
-        <SceneVignette />
         <FadingView isVisible={!opening.isListHidden} style={styles.listLayer}>
           {renderList()}
         </FadingView>

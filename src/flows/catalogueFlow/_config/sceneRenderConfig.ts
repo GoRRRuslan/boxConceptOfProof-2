@@ -41,6 +41,10 @@ export const IS_ANTIALIASING_ENABLED = Platform.OS !== 'android'
 // Feature switches (documented in docs/ANIMATIONS.md; used to find what a GL driver cannot take).
 export const IS_ENVIRONMENT_ENABLED = false
 export const IS_SHADOWS_ENABLED = true
+// Shadows are rendered for this long right after the app starts (while the boxes pop in) and then switched off until a box is inspected:
+// the shader programs of the shadow variant are compiled during the entrance instead of as a hitch of about 200 ms when the first box
+// is selected (three.js keeps compiled programs).
+export const SHADOW_WARMUP_MILLISECONDS = 4000
 
 // The GL view is rendered at this fraction of the screen's native pixel size and scaled up by the
 // compositor. expo-gl always renders at the full native resolution (3x on an iPhone), which a

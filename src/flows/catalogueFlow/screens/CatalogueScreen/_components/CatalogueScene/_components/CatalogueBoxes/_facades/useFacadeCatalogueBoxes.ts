@@ -75,7 +75,7 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
   const lastIridescenceTints = useRef<number[][]>([])
   // Scroll speed -> sway of the boxes: the last offset and time we saw, and the filtered sway.
   const swayState = useRef<[number, number, number]>([0, 0, 0])
-  const { effectsRoot, effects, auraColors, tintCache } = useFacadeSceneEffects(cards)
+  const { effectsRoot, effects, auraColors, tintCache } = useFacadeSceneEffects(cards, viewportWidth / Math.max(1, viewportHeight))
   const instances: IBoxInstance[] = useMemo(
     () =>
       template
