@@ -5,6 +5,7 @@ import type { Group } from 'three'
 import boxModelSource from '@assets/models/box.glb'
 import { ENTRANCE_STAGGER_MILLISECONDS } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
 import { computeBoxPose } from '@flows/catalogueFlow/_facadesLogic/computeBoxPose'
+import { ENTRANCE_NOT_STARTED, resolveEntranceStart } from '@flows/catalogueFlow/_facadesLogic/resolveEntranceStart'
 import { computeEntranceScale, computePressScale } from '@flows/catalogueFlow/_facadesLogic/computeCardAnimation'
 import type { ICatalogueCard, ICatalogueSceneSync, ICatalogueViewport } from '@flows/catalogueFlow/_types'
 import { TILT_PITCH_RADIANS, TILT_YAW_RADIANS } from '@flows/openingFlow/_config/openingConfig'
@@ -36,8 +37,6 @@ const MAXIMUM_FRAME_SECONDS = 0.05
 const PARKED_HEIGHT = -1000
 // Smaller than this the box is invisible anyway; hiding it avoids a singular matrix.
 const MINIMUM_VISIBLE_SCALE = 0.0005
-// Before the first frame with boxes the entrance has not started: the boxes are invisible until it does.
-const ENTRANCE_NOT_STARTED = Number.MAX_SAFE_INTEGER
 
 // One GLB loaded once, one instance per card. Every frame (React Three Fiber's `useFrame`, on the JS
 // thread) each instance is placed for the current scroll offset and opening state: in its card
@@ -135,6 +134,13 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
     const [tiltX, tiltY] = scene.focusTarget === 1 ? tilt.getBlocking() : [0, 0]
     const press = pressState.getBlocking()
     const pressScale = computePressScale(press, nowMilliseconds)
+
+    if (entranceStartedAt.current === ENTRANCE_NOT_STARTED) {
+      entranceStartedAt.current = resolveEntranceStart(entranceStartedAt.current, nowMilliseconds, instances.length)
+
+      markStartup(EStartupMark.FirstBoxFrame)
+    }
+
     const entranceStart = entranceStartedAt.current
 
     instances.forEach(({ root }, cardIndex) => {

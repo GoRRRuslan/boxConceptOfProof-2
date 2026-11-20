@@ -26,3 +26,14 @@ export const markStartup = (mark: EStartupMark): void => {
     fetch(PERF_SINK_URL, { method: 'POST', body: JSON.stringify(report) }).catch(() => undefined)
   }
 }
+
+// A measured duration inside startup (for example how long parsing the model took).
+export const markDuration = (name: string, milliseconds: number): void => {
+  const report = { startupDuration: name, milliseconds }
+
+  console.info(`[startup] ${JSON.stringify(report)}`)
+
+  if (PERF_SINK_URL) {
+    fetch(PERF_SINK_URL, { method: 'POST', body: JSON.stringify(report) }).catch(() => undefined)
+  }
+}

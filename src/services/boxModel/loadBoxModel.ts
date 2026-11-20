@@ -1,3 +1,4 @@
+import { markDuration } from '@services/performance/startupTimeline'
 import { Asset } from 'expo-asset'
 import type { Group } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -13,6 +14,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 const modelPromiseByModule = new Map<number, Promise<Group>>()
 
 const parseBoxModel = async (moduleIdentifier: number): Promise<Group> => {
+  const t0 = Date.now()
   const asset = Asset.fromModule(moduleIdentifier)
 
   await asset.downloadAsync()
@@ -21,11 +23,15 @@ const parseBoxModel = async (moduleIdentifier: number): Promise<Group> => {
   const response = await fetch(assetUri)
   const bytes = await response.arrayBuffer()
 
+  markDuration('glbFetchMs', Date.now() - t0)
+
   return new Promise<Group>((resolve, reject) => {
     new GLTFLoader().parse(
       bytes,
       '',
       gltf => {
+        markDuration('glbParsedMs', Date.now() - t0)
+
         resolve(gltf.scene)
       },
       error => {

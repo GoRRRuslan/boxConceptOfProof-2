@@ -36,8 +36,8 @@ export const TONE_MAPPING_EXPOSURE = 1.05
 export const IS_ANTIALIASING_ENABLED = true
 
 // Feature switches (documented in docs/ANIMATIONS.md; used to find what a GL driver cannot take).
-export const IS_ENVIRONMENT_ENABLED = true
-export const IS_SHADOWS_ENABLED = true
+export const IS_ENVIRONMENT_ENABLED = false
+export const IS_SHADOWS_ENABLED = false
 
 // The GL view is rendered at this fraction of the screen's native pixel size and scaled up by the
 // compositor. expo-gl always renders at the full native resolution (3x on an iPhone), which a
