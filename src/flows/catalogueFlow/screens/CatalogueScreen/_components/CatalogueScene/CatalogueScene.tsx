@@ -1,23 +1,17 @@
 import { WebGpuCanvas } from '@components/WebGpuCanvas/WebGpuCanvas'
 import { useMemo } from 'react'
 import { View } from 'react-native'
-import { ACESFilmicToneMapping, NoToneMapping, type PerspectiveCamera } from 'three'
+import { ACESFilmicToneMapping, type PerspectiveCamera } from 'three'
 
 import { FrameMeter } from '@components/FrameMeter'
 import { CAMERA_DISTANCE } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
-import { IS_ANTIALIASING_ENABLED, isSoftwareSaving, IS_SHADOWS_ENABLED, RENDER_RESOLUTION_SCALE, TONE_MAPPING_EXPOSURE } from '@flows/catalogueFlow/_config/sceneRenderConfig'
-import { installCheapColorOutput } from '@services/softwareRenderer/installCheapColorOutput'
+import { IS_ANTIALIASING_ENABLED, IS_SHADOWS_ENABLED, RENDER_RESOLUTION_SCALE, TONE_MAPPING_EXPOSURE } from '@flows/catalogueFlow/_config/sceneRenderConfig'
 import { computeCameraFieldOfView } from '@flows/catalogueFlow/_facadesLogic/computeCameraFieldOfView'
 import type { ICatalogueCard, ICatalogueSceneSync, ICatalogueViewport } from '@flows/catalogueFlow/_types'
 import { CatalogueBoxes } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/CatalogueBoxes/CatalogueBoxes'
 import { SceneLighting } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/SceneLighting/SceneLighting'
 import { makeStyles } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/CatalogueScene.styles'
 import type { IOpeningPhaseKey } from '@flows/openingFlow/_types'
-
-// Must happen before the first shader is compiled.
-if (isSoftwareSaving('cheapColorOutput')) {
-  installCheapColorOutput()
-}
 
 interface ICatalogueSceneProps {
   cards: ICatalogueCard[]
@@ -39,7 +33,7 @@ export const CatalogueScene = ({
 }: ICatalogueSceneProps) => {
   const styles = useMemo(() => makeStyles(RENDER_RESOLUTION_SCALE), [])
   // Shadows stay on: switching them re-compiles every material (a stall of about a second), and on a real GPU the depth pass is cheap.
-  const isShadowActive = !isSoftwareSaving('noShadows')
+  const isShadowActive = IS_SHADOWS_ENABLED
   const camera = useMemo(
     () => ({ fov: computeCameraFieldOfView(), near: 0.1, far: 60, position: [0, 0, CAMERA_DISTANCE] as [number, number, number] }),
     [],
@@ -61,7 +55,7 @@ export const CatalogueScene = ({
       camera={camera}
       isShadowEnabled={IS_SHADOWS_ENABLED && isShadowActive}
       isAntialiased={IS_ANTIALIASING_ENABLED}
-      toneMapping={isSoftwareSaving('noToneMapping') ? NoToneMapping : ACESFilmicToneMapping}
+      toneMapping={ACESFilmicToneMapping}
       onCreated={handleCreated}
       testID="catalogueCanvas"
     >

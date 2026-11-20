@@ -1,4 +1,4 @@
-import { IS_SHADOWS_ENABLED, isSoftwareSaving, SCENE_LIGHTS, SHADOW_BIAS, SHADOW_FRUSTUM_HALF_SIZE, SHADOW_MAP_SIZE, SHADOW_NORMAL_BIAS } from '@flows/catalogueFlow/_config/sceneRenderConfig'
+import { IS_SHADOWS_ENABLED, SCENE_LIGHTS, SHADOW_BIAS, SHADOW_FRUSTUM_HALF_SIZE, SHADOW_MAP_SIZE, SHADOW_NORMAL_BIAS } from '@flows/catalogueFlow/_config/sceneRenderConfig'
 import { useFacadeSceneLighting } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/SceneLighting/_facades/useFacadeSceneLighting'
 
 // The light rig (key with shadows, rim, fill) plus the reflection environment.
@@ -12,8 +12,7 @@ export const SceneLighting = ({ isShadowActive }: ISceneLightingProps) => {
 
   return (
     <>
-      {isSoftwareSaving('oneLight') ? <hemisphereLight args={['#dfe8ff', '#202433', 0.9]} /> : null}
-      {(isSoftwareSaving('oneLight') ? SCENE_LIGHTS.slice(0, 1) : SCENE_LIGHTS).map(light => (
+      {SCENE_LIGHTS.map(light => (
         <directionalLight
           key={light.position.join()}
           position={light.position}
