@@ -12,13 +12,15 @@ import { CatalogueBoxes } from '@flows/catalogueFlow/screens/CatalogueScreen/_co
 import { SceneLighting } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/SceneLighting/SceneLighting'
 import { makeStyles } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/CatalogueScene.styles'
 import { installGpuSync } from '@services/gpuSync/installGpuSync'
-import { EOpeningPhase, type IOpeningPhaseKey } from '@flows/openingFlow/_types'
+import type { IOpeningPhaseKey } from '@flows/openingFlow/_types'
 
 interface ICatalogueSceneProps {
   cards: ICatalogueCard[]
   viewport: ICatalogueViewport | null
   sceneSync: ICatalogueSceneSync
   phaseKey: IOpeningPhaseKey
+  // A box is inspected, opened or revealed: shadows are rendered only then (they cost a depth pass).
+  isInspecting: boolean
   isRenderContinuous: boolean
   onRenderedFrame: (timestampMilliseconds: number) => void
 }
@@ -29,6 +31,7 @@ export const CatalogueScene = ({
   viewport,
   sceneSync,
   phaseKey,
+  isInspecting,
   isRenderContinuous,
   onRenderedFrame,
 }: ICatalogueSceneProps) => {
@@ -54,14 +57,14 @@ export const CatalogueScene = ({
     <Canvas
       style={styles.canvas}
       frameloop="always"
-      shadows={IS_SHADOWS_ENABLED && phaseKey !== EOpeningPhase.Browsing}
+      shadows={IS_SHADOWS_ENABLED && isInspecting}
       camera={camera}
       gl={{ alpha: true, antialias: IS_ANTIALIASING_ENABLED, toneMapping: ACESFilmicToneMapping }}
       onCreated={handleCreated}
       pointerEvents="none"
       testID="catalogueCanvas"
     >
-      <SceneLighting isShadowActive={phaseKey !== EOpeningPhase.Browsing} />
+      <SceneLighting isShadowActive={isInspecting} />
       <FrameMeter onRenderedFrame={onRenderedFrame} />
       {cards.length > 0 && viewport ? (
         <CatalogueBoxes
