@@ -12,6 +12,7 @@ Start here. Each row says what a document is for, so you can open the right one 
 | See how the 3D scene works (one canvas, hinge, render on demand) | [../README.md → Real-time 3D](../README.md#5-real-time-3d), [MODEL.md](MODEL.md) |
 | See how three.js runs on React Native (expo-gl, Metro, GPU sync) | [../README.md → three.js on expo-gl](../README.md#6-threejs-on-expo-gl) |
 | See every animation, where it lives and how it works | [ANIMATIONS.md](ANIMATIONS.md) |
+| See the show around the box (seams, light, sparks, shock waves, camera punch) | [EFFECTS.md](EFFECTS.md) |
 | **Test the app (rules, iOS, Android, FPS)** | **[TESTING.md](TESTING.md)** |
 | See what was tested and the result, plus bugs found | [TEST_CHECKLIST.md](TEST_CHECKLIST.md) |
 | See FPS numbers, method and limits | [PERFORMANCE.md](PERFORMANCE.md) |
@@ -26,6 +27,7 @@ Start here. Each row says what a document is for, so you can open the right one 
 |---|---|
 | [ASSIGNMENT.md](ASSIGNMENT.md) | The original assignment |
 | [ANIMATIONS.md](ANIMATIONS.md) | All animations with screenshots |
+| [EFFECTS.md](EFFECTS.md) | The show around the box: timeline, rarity table, how it is drawn |
 | [TESTING.md](TESTING.md) | Testing guide and the golden rules |
 | [TEST_CHECKLIST.md](TEST_CHECKLIST.md) | Cases, results per platform, bugs found, gaps |
 | [PERFORMANCE.md](PERFORMANCE.md) | FPS report: numbers, method, startup, limits |

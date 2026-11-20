@@ -14,7 +14,7 @@ interface ICatalogueBoxesProps {
 // Loads the box model, puts one instance per card into the scene and keeps them in sync with the
 // list and with the opening experience.
 export const CatalogueBoxes = ({ cards, viewport, sceneSync, phaseKey, isRenderContinuous }: ICatalogueBoxesProps) => {
-  const { modelState, boxRoots } = useFacadeCatalogueBoxes({ cards, viewport, sceneSync })
+  const { modelState, boxRoots, effectsRoot } = useFacadeCatalogueBoxes({ cards, viewport, sceneSync })
 
   // Keeps the renderer running while something moves; a still screen stops rendering (battery).
   return (
@@ -22,6 +22,7 @@ export const CatalogueBoxes = ({ cards, viewport, sceneSync, phaseKey, isRenderC
       {boxRoots.map((boxRoot, cardIndex) => (
         <primitive key={cards[cardIndex].identifier} object={boxRoot} />
       ))}
+      <primitive object={effectsRoot} />
       <RenderOnDemand
         activityKey={`${cards.length}|${viewport.width}x${viewport.height}|${modelState}|${phaseKey}`}
         warmupKey={modelState}

@@ -1,21 +1,23 @@
 import type { TFunction } from 'i18next'
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { usePanGesture, usePinchGesture, useSimultaneousGestures, useTapGesture } from 'react-native-gesture-handler'
+import { useLongPressGesture, usePanGesture, usePinchGesture, useSimultaneousGestures, useTapGesture } from 'react-native-gesture-handler'
 import { createSharedValue } from '@services/sceneSync/createSharedValue'
 
 import type { ICatalogueCard } from '@flows/catalogueFlow/_types'
 import {
   ANTICIPATION_DURATION_MILLISECONDS,
+  ANTICIPATION_HAPTIC_PULSES_MILLISECONDS,
   DRAG_INERTIA_MAXIMUM_MILLISECONDS,
   DRAG_RADIANS_PER_PIXEL,
   FOCUS_DURATION_MILLISECONDS,
+  HOLD_TO_OPEN_MILLISECONDS,
   LID_OPEN_DURATION_MILLISECONDS,
   OPEN_SWIPE_DISTANCE,
   TUCK_DELAY_MILLISECONDS,
   TUCK_DURATION_MILLISECONDS,
 } from '@flows/openingFlow/_config/openingConfig'
-import { RARITY_STYLES } from '@flows/openingFlow/_config/rarityConfig'
+import { RARITY_LEVELS, RARITY_STYLES } from '@flows/openingFlow/_config/rarityConfig'
 import { useFacadeDeviceTilt } from '@flows/openingFlow/_facades/useFacadeDeviceTilt'
 import { getPrimaryActionForPhase } from '@flows/openingFlow/_facadesLogic/getPrimaryActionForPhase'
 import { getWatchRarity } from '@flows/openingFlow/_facadesLogic/getWatchRarity'
@@ -163,7 +165,11 @@ export const useOpeningFacade = ({ boxesData, cards }: IUseOpeningFacadeParams):
       setRevealedWatch(watch)
 
       // The light inside the box will glow in the colour of the prize.
-      sceneState.setBlocking(setGlowColor(sceneState.getBlocking(), RARITY_STYLES[getWatchRarity(watch.valueInCents)].glowColorLinear))
+      const purchasedRarity = getWatchRarity(watch.valueInCents)
+
+      sceneState.setBlocking(
+        setGlowColor(sceneState.getBlocking(), RARITY_STYLES[purchasedRarity].glowColorLinear, RARITY_LEVELS[purchasedRarity]),
+      )
 
       dispatchEvent(EOpeningEvent.PurchaseSucceeded)
 
@@ -197,6 +203,14 @@ export const useOpeningFacade = ({ boxesData, cards }: IUseOpeningFacadeParams):
     void hapticFeedback.anticipation()
 
     soundEffects.play(ESoundEffect.Anticipation)
+
+    // The pulses get denser and harder as the box charges.
+    openingTimers.current.push(
+      ...ANTICIPATION_HAPTIC_PULSES_MILLISECONDS.map((pulseDelay, pulseIndex) =>
+        setTimeout(() => {
+          void hapticFeedback.anticipationPulse(pulseIndex / (ANTICIPATION_HAPTIC_PULSES_MILLISECONDS.length - 1))
+        }, pulseDelay)),
+    )
 
     openingTimers.current.push(
       setTimeout(() => {
@@ -338,7 +352,17 @@ export const useOpeningFacade = ({ boxesData, cards }: IUseOpeningFacadeParams):
     },
   })
 
-  const gesture = useSimultaneousGestures(panGesture, pinchGesture, doubleTapGesture)
+  // Hold a finger on a bought box: it charges and opens.
+  const holdGesture = useLongPressGesture({
+    runOnJS: true,
+    enabled: phase === EOpeningPhase.Ready,
+    minDuration: HOLD_TO_OPEN_MILLISECONDS,
+    onActivate: () => {
+      handleOpenPress()
+    },
+  })
+
+  const gesture = useSimultaneousGestures(panGesture, pinchGesture, doubleTapGesture, holdGesture)
 
   // ------------------- Side effects ----------------------- //
   useFacadeDeviceTilt({ isActive: phase !== EOpeningPhase.Browsing, tilt })

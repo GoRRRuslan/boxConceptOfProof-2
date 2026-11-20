@@ -20,6 +20,18 @@ import {
   getTuckProgress,
 } from '@flows/openingFlow/_facadesLogic/openingSceneState'
 import { isDragStateAnimating, stepDragInertia } from '@flows/openingFlow/_facadesLogic/stepDragInertia'
+import {
+  computeCameraPunch,
+  computeJitterScale,
+  computeLidSettleDegrees,
+  computeSeamIntensity,
+  getPopElapsedMilliseconds,
+  getRarityProfile,
+  stepScrollSway,
+} from '@flows/openingFlow/_facadesLogic/computeSceneEffects'
+import type { IOpeningPose } from '@flows/openingFlow/_types'
+import { applySceneEffects } from '@services/sceneEffects/applySceneEffects'
+import { useFacadeSceneEffects } from '@flows/catalogueFlow/screens/CatalogueScreen/_components/CatalogueScene/_components/CatalogueBoxes/_facades/useFacadeSceneEffects'
 import { type IBoxInstance, createBoxInstance } from '@services/boxModel/createBoxInstance'
 import { EStartupMark, markStartup } from '@services/performance/startupTimeline'
 import { loadBoxModel } from '@services/boxModel/loadBoxModel'
@@ -56,6 +68,10 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
   // Last glow strength written to the boxes (so a material is only touched when the strength really changes).
   const lastGlowStrength = useRef<number>(0)
   const lastGlowCardIndex = useRef<number>(-1)
+  const lastSeamIntensity = useRef<number>(-1)
+  // Scroll speed -> sway of the boxes: the last offset and time we saw, and the filtered sway.
+  const swayState = useRef<[number, number, number]>([0, 0, 0])
+  const { effectsRoot, effects, auraColors, tintCache } = useFacadeSceneEffects(cards)
   const instances: IBoxInstance[] = useMemo(
     () =>
       template
@@ -118,8 +134,28 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
     const dollyProgress = easeOutBack(focusLinearProgress)
     const lidProgress = getLidProgress(scene, nowMilliseconds)
     const tuckProgress = easeInOutCubic(getTuckProgress(scene, nowMilliseconds))
-    const anticipation = computeAnticipationEffect(getAnticipationProgress(scene, nowMilliseconds), nowMilliseconds)
-    const lidAngleDegrees = LID_FULLY_OPEN_ANGLE_DEGREES * (scene.lidTarget === 1 ? easeOutBack(lidProgress) : easeInOutCubic(lidProgress))
+    const popElapsed = getPopElapsedMilliseconds(scene, nowMilliseconds)
+    // The shake dies away in the last moment before the lid is let go (the box holds its breath).
+    const jitterScale = computeJitterScale(popElapsed)
+    const rawAnticipation = computeAnticipationEffect(getAnticipationProgress(scene, nowMilliseconds), nowMilliseconds)
+    const anticipation = {
+      ...rawAnticipation,
+      jitterYawRadians: rawAnticipation.jitterYawRadians * jitterScale,
+      jitterPitchRadians: rawAnticipation.jitterPitchRadians * jitterScale,
+    }
+    const punch = computeCameraPunch(popElapsed, scene.rarityLevel)
+    const seamIntensity = computeSeamIntensity(scene, nowMilliseconds, focusLinearProgress, tuckProgress)
+    const lidAngleDegrees =
+      LID_FULLY_OPEN_ANGLE_DEGREES * (scene.lidTarget === 1 ? easeOutBack(lidProgress) : easeInOutCubic(lidProgress)) +
+      (scene.lidTarget === 1 ? computeLidSettleDegrees(popElapsed) : 0)
+
+    // The boxes sway against the direction of a fast scroll.
+    const [lastScrollOffset, lastScrollTime, previousSway] = swayState.current
+    const scrollDeltaSeconds = (nowMilliseconds - lastScrollTime) / 1000
+    const scrollVelocity = scrollDeltaSeconds > 0 && scrollDeltaSeconds < 0.2 ? (currentScrollOffset - lastScrollOffset) / scrollDeltaSeconds : 0
+    const sway = stepScrollSway(previousSway, scrollVelocity, deltaSeconds)
+
+    swayState.current = [currentScrollOffset, nowMilliseconds, sway]
 
     // Inspection physics: inertia after a flick, gliding back after a double tap, slow auto-rotation when left alone.
     const isAutoRotateAllowed = scene.focusTarget === 1 && scene.lidTarget === 0 && focusLinearProgress >= 1
@@ -143,11 +179,16 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
 
     const entranceStart = entranceStartedAt.current
 
+    const poses: IOpeningPose[] = []
+    let focusedPose: IOpeningPose | null = null
+    let shakeX = 0
+
     instances.forEach(({ root }, cardIndex) => {
-      const listPose = computeBoxPose({ cardIndex, scrollOffset: currentScrollOffset, viewportHeight })
+      const baseListPose = computeBoxPose({ cardIndex, scrollOffset: currentScrollOffset, viewportHeight })
+      const listPose = { ...baseListPose, yawRadians: baseListPose.yawRadians + sway, pitchRadians: baseListPose.pitchRadians + sway * 0.5 }
       const entranceScale = computeEntranceScale(nowMilliseconds - entranceStart - cardIndex * ENTRANCE_STAGGER_MILLISECONDS)
       const squeeze = press.cardIndex === cardIndex ? pressScale : 1
-      const pose = computeOpeningPose({
+      const openingPose = computeOpeningPose({
         listPose: { ...listPose, scale: listPose.scale * entranceScale * squeeze },
         isFocusedCard: cardIndex === scene.focusedCardIndex,
         lidProgress,
@@ -164,14 +205,32 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
         anticipation,
         tuckProgress,
       })
+      const isFocusedCard = cardIndex === scene.focusedCardIndex
+      // Camera punch: the focused box swells and shakes for a moment when the lid is let go.
+      const pose = isFocusedCard
+        ? {
+            ...openingPose,
+            scale: openingPose.scale * (1 + punch.scaleBoost),
+            translateY: openingPose.translateY + punch.shakeY * openingPose.scale,
+          }
+        : openingPose
+      const poseShakeX = isFocusedCard ? punch.shakeX * openingPose.scale : 0
       const isShown = pose.isVisible && pose.scale > MINIMUM_VISIBLE_SCALE
+
+      poses.push(pose)
+
+      if (isFocusedCard) {
+        focusedPose = pose
+
+        shakeX = poseShakeX
+      }
 
       // Scale, then pitch, then yaw, then place: the same order as the Filament version's matrix chain.
       root.visible = isShown
 
       root.rotation.set(pose.pitchRadians, pose.yawRadians, 0, 'YXZ')
 
-      root.position.set(0, isShown ? pose.translateY : PARKED_HEIGHT, pose.translateZ)
+      root.position.set(poseShakeX, isShown ? pose.translateY : PARKED_HEIGHT, pose.translateZ)
 
       root.scale.setScalar(pose.scale)
     })
@@ -205,8 +264,22 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
 
         lastGlowCardIndex.current = scene.focusedCardIndex
       }
+
+      // The seams of the focused box light up in the colour of the prize.
+      if (Math.abs(seamIntensity - lastSeamIntensity.current) > 0.004) {
+        const [red, green, blue] = scene.glowColorLinear
+        const strength = seamIntensity * getRarityProfile(scene.rarityLevel).emissiveBoost
+
+        focusedInstance.seamMaterials.forEach(material => {
+          material.emissive.setRGB(red * strength, green * strength, blue * strength)
+        })
+
+        lastSeamIntensity.current = seamIntensity
+      }
     }
+
+    applySceneEffects(effects, auraColors, tintCache, { scene, nowMilliseconds, focusProgress, tuckProgress, seamIntensity, poses, focusedPose, shakeX })
   })
 
-  return { modelState, boxRoots }
+  return { modelState, boxRoots, effectsRoot }
 }

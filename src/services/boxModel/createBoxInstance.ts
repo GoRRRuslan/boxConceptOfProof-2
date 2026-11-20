@@ -8,6 +8,7 @@ export enum EBoxPartName {
   Lid = 'Shell_Lid',
   Wordmark = 'Shell_Wordmark',
   Cushion = 'Shell_Fitted_Cushion',
+  Seam = 'Shell_Seam',
 }
 
 export interface IBoxLook {
@@ -25,6 +26,8 @@ export interface IBoxInstance {
   lidParts: Object3D[]
   // Materials that carry the light from inside the opened box (cushion and inner side of the lid).
   glowMaterials: MeshStandardMaterial[]
+  // The coloured trim of the seam: it lights up when the box is armed and while it opens.
+  seamMaterials: MeshStandardMaterial[]
 }
 
 // The mesh of every primitive of a part: a one-primitive part is a Mesh, a part with several
@@ -58,6 +61,7 @@ const BODY_TARGETS: IPrimitiveTarget[] = [
   { partName: EBoxPartName.Base, primitiveIndex: 0 },
   { partName: EBoxPartName.Lid, primitiveIndex: 0 },
 ]
+const SEAM_TARGETS: IPrimitiveTarget[] = [{ partName: EBoxPartName.Seam, primitiveIndex: 0 }]
 const GLOW_TARGETS: IPrimitiveTarget[] = [
   { partName: EBoxPartName.Cushion, primitiveIndex: 0 },
   { partName: EBoxPartName.Lid, primitiveIndex: 1 },
@@ -69,6 +73,7 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
   const model = template.clone(true)
   const root = new Group()
   const glowMaterials: MeshStandardMaterial[] = []
+  const seamMaterials: MeshStandardMaterial[] = []
 
   for (const { partName, primitiveIndex } of BODY_TARGETS) {
     const part = findPart(model, partName)
@@ -114,6 +119,21 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
     glowMaterials.push(material)
   }
 
+  for (const { partName, primitiveIndex } of SEAM_TARGETS) {
+    const part = findPart(model, partName)
+    const mesh = part ? getPrimitiveMeshes(part)[primitiveIndex] : undefined
+
+    if (!mesh) {
+      continue
+    }
+
+    const material = (mesh.material as MeshStandardMaterial).clone()
+
+    mesh.material = material
+
+    seamMaterials.push(material)
+  }
+
   model.traverse(object => {
     object.castShadow = castShadows
 
@@ -131,5 +151,5 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
     return part ? [part] : []
   })
 
-  return { root, lidParts, glowMaterials }
+  return { root, lidParts, glowMaterials, seamMaterials }
 }

@@ -50,6 +50,9 @@ export interface IOpeningSceneState {
   tuckStartedAtMilliseconds: number
   // Colour (linear RGB) of the light inside the box once it is open; depends on the rarity of the prize.
   glowColorLinear: [number, number, number]
+  // Rarity of the bought prize as 0 (common) ... 3 (legendary); -1 until a prize has been bought. Drives the size of the show and
+  // tells the scene that the box is "armed" (its seams breathe).
+  rarityLevel: number
 }
 
 // Rotation of the focused box by the user's finger, with inertia after release.
