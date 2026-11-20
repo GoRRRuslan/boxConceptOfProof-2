@@ -83,7 +83,10 @@ export const isSoftwareSaving = (saving: SoftwareSaving): boolean => IS_SOFTWARE
 
 // The inner parts are drawn this long after the start so that their shader programs are compiled.
 export const SOFTWARE_INNER_WARM_UP_MILLISECONDS = 3500
-export const RENDER_RESOLUTION_SCALE = Platform.OS === 'android' ? 1 : isSoftwareSaving('lowResolution') ? 0.2 : 0.37
+// Render scale on the software renderer: 0.2 gave jagged edges, 0.6 only 37 FPS; 0.4 holds 60 FPS with smoother edges (EXPO_PUBLIC_SOFT_SCALE overrides it for measuring).
+const SOFTWARE_RENDER_RESOLUTION_SCALE = Number(process.env.EXPO_PUBLIC_SOFT_SCALE ?? 0.4)
+
+export const RENDER_RESOLUTION_SCALE = Platform.OS === 'android' ? 1 : isSoftwareSaving('lowResolution') ? SOFTWARE_RENDER_RESOLUTION_SCALE : 0.37
 
 // A GPU sync point (a one-pixel read-back) after every Nth frame: back-pressure for the JS frame loop,
 // see services/gpuSync/installGpuSync.ts. 0 = never.
