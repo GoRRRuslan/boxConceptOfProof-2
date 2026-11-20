@@ -189,9 +189,9 @@ What happens, in order:
 
 - **Three lights.** A warm key light from the upper left (casts shadows), a cool rim light from behind that outlines the box against the dark background, and a soft fill from below (`SCENE_LIGHTS` in `sceneRenderConfig.ts`, drawn by `SceneLighting`). Intensities were tuned by eye. ACES filmic tone mapping.
 - **Shadows.** The lid shades the inside of the box and the box shades its own lower edge: one shadow-casting light, 512 shadow map. Shadows are rendered **only while a box is inspected or opened**; the list draws none (a second depth pass costs frames).
-- **Reflections.** A PMREM `RoomEnvironment` is implemented but switched off (`IS_ENVIRONMENT_ENABLED = false`): on the iOS Simulator's software GL it costs about 13 s at start.
+- **Reflections.** A PMREM `RoomEnvironment` gives the glossy and metallic boxes something to reflect (`IS_ENVIRONMENT_ENABLED`, intensity 0.12).
 - **Not implemented:** ambient occlusion and bloom.
-- **Resolution.** Android renders at full native resolution with MSAA off (`RENDER_RESOLUTION_SCALE`, `IS_ANTIALIASING_ENABLED` in `sceneRenderConfig.ts`); see [PERFORMANCE.md](PERFORMANCE.md). iOS renders at 0.37 of the native size with MSAA requested, because expo-gl always renders at the native pixel density and the iOS Simulator cannot take more.
+- **Resolution.** Native resolution with 4x MSAA on both platforms (`RENDER_RESOLUTION_SCALE`, `IS_ANTIALIASING_ENABLED` in `sceneRenderConfig.ts`); the scene is drawn with WebGPU, see [PERFORMANCE.md](PERFORMANCE.md).
 - **Finish by price.** The dearer the box, the more it shines (computed by `getBoxFinish`, applied as per-box `MeshPhysicalMaterial` values):
 
 | Box price | Finish | Roughness | Metallic | Clear coat |
@@ -227,14 +227,12 @@ Every sound is synthesised by a script (`yarn assetsSounds`, `scripts/assets/gen
 
 - **Render on demand.** `frameloop` is switched to `always` while something moves and back to `demand` after a run of quick frames, so the GPU rests on a still screen (`components/RenderOnDemand`).
 - **One canvas, one GL context.** All boxes live in one scene; each costs one transform per frame. Geometry is shared between boxes.
-- **GPU back-pressure.** expo-gl queues GL commands, so JavaScript can run ahead of the GPU. After each frame `services/gpuSync` reads one pixel back, which also makes the FPS meter report the rate the GPU really achieves.
-- **Shadows only when needed**, MSAA off on Android, no reflection environment: see [PERFORMANCE.md](PERFORMANCE.md) for what each one cost.
+- **Shadows stay on**, a 2048 shadow map and the reflection environment: see [PERFORMANCE.md](PERFORMANCE.md) for what each one cost.
 
 ---
 
 ## 10. Limits
 
 - The pictures are screenshots, not videos; animations are best judged on a device.
-- iOS: the Simulator draws with software OpenGL ES (1 to 4 FPS), so its animations were only partly judged; see [TEST_CHECKLIST.md](TEST_CHECKLIST.md).
 - Pinch, device tilt, sounds and haptics cannot be exercised or heard through `adb` or in a simulator; the logic is covered by unit tests.
-- Not implemented compared with a full PBR pipeline: ambient occlusion, bloom, reflection environment (see section 7).
+- Not implemented compared with a full PBR pipeline: ambient occlusion and bloom (see section 7).

@@ -61,6 +61,6 @@ rm -rf android/app/build/generated/assets android/app/build/intermediates/assets
 
 - **Automated:** `yarn ciPipeline` (eslint + tsc) and `yarn test` (Jest and React Native Testing Library).
 - **FPS:** `yarn perfAndroidCatalogue` / `yarn perfIosCatalogue` (scrolling), `yarn perfAndroidOpening` (opening flow), `yarn perfAndroidFps` / `yarn perfIosFps` (quick sample), `yarn perfAndroidPresentFps` (frames the system really presents). Raw logs belong in `docs/data/`.
-- **Simulator caveat:** the iOS Simulator draws OpenGL ES with Apple's software renderer. Frame times there say little about a real iPhone; the app syncs the GPU every frame, so the overlay shows the real (software) rate and not an optimistic JavaScript rate.
+- **Simulator and emulator:** the scene is drawn by the GPU (Metal on iOS, Vulkan on Android), so the iOS Simulator is representative of the code, not of a phone's GPU. Start the Android Emulator with `-gpu host`; its default mode is a CPU renderer.
 - **Flow to walk on each platform:** browse, inspect (drag, pinch, double tap), buy, open (button and swipe up), reveal, Done, collection, plus a failing purchase and a rapid double purchase.
 - **Recording results:** a new measurement goes into [PERFORMANCE.md](PERFORMANCE.md) (say which build and device), a new case or bug into [TEST_CHECKLIST.md](TEST_CHECKLIST.md). If something could not be run, write that down too.

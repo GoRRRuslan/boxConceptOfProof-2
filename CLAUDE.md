@@ -1,6 +1,6 @@
 # Project rules (adapted from the fitpilotai-frontend reference)
 
-Stack: Expo SDK 58 · TypeScript strict · Zustand 5 · React Query 5 · React Navigation 7 · Reanimated 4 · three.js + React Three Fiber (`@react-three/fiber/native`) + expo-gl.
+Stack: Expo SDK 58 · TypeScript strict · Zustand 5 · React Query 5 · React Navigation 7 · Reanimated 4 · three.js (WebGPU build) + React Three Fiber (`@react-three/fiber/native`) + react-native-webgpu (Metal on iOS, Vulkan on Android; no expo-gl).
 
 ## Architecture
 - Flow-based: `src/flows/<name>Flow/{screens,_facades,_facadesLogic,_adapters,_components,_navigation,_types}`.

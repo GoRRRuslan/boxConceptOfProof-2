@@ -10,14 +10,14 @@
 
 ## Manual, release builds
 
-Android Emulator MW_Pixel9_API_37 (60 FPS) and iOS Simulator iPhone 17 (software GL, 1–4 FPS). Screenshots in `docs/media/` (`android-*`, `ios-*`).
+Android Emulator MW_Pixel9_API_37 (host GPU) and iOS Simulator iPhone 17, both drawn with WebGPU (60 FPS on iOS; on Android 60 FPS with stretches of 30 FPS, see [PERFORMANCE.md](PERFORMANCE.md)). Screenshots from before the change to WebGPU were taken on expo-gl. Screenshots in `docs/media/` (`android-*`, `ios-*`).
 
 | Case | Android | iOS |
 |---|---|---|
 | Catalogue with boxes (shown ~1 s / ~0.76 s after start) | ✅ `android-1-catalogue.png` | ✅ `ios-1-catalogue.png` |
 | Scroll, boxes follow their cards | ✅ 60 FPS | ✅ but ~3 FPS |
 | Tap card → inspect (box to the middle, Back, name and price) | ✅ `android-2-inspect.png` | ✅ |
-| Drag turns the box | ✅ `android-2b-dragged.png` | tried (`ios-2-inspect-dragged.png`), not judgeable: the simulator's 3D view lags the UI by seconds (software GL) |
+| Drag turns the box | ✅ `android-2b-dragged.png` | ✅ on iOS after the change to WebGPU (it lagged by seconds on expo-gl) |
 | Double tap resets | ✅ (adb taps) `android-2c-double-tap-reset.png` | not walked |
 | Pinch zoom, device tilt | not walked (no multi-touch / sensor via adb) | not walked |
 | Buy: balance $1,000 → $950 | ✅ `android-3-bought.png` | ✅ `ios-3-bought.png` |
@@ -33,10 +33,10 @@ Android Emulator MW_Pixel9_API_37 (60 FPS) and iOS Simulator iPhone 17 (software
 
 ## Known gaps / visible defects
 
-- iOS Simulator is far below 60 FPS because of its software GL (not measurable on a device here); the iOS flow was only partly walked.
-- No ambient occlusion, no bloom; no reflection environment (a flag, too slow in software GL); shadows only while a box is inspected.
+- No physical device was measured; the iOS flow was walked on the Simulator (WebGPU, 60 FPS) after the change from expo-gl.
+- No ambient occlusion, no bloom.
 - iOS renders at 0.37 of the native resolution with MSAA (Android: full resolution, MSAA off), so iOS edges are softer.
 - The glow is an emissive colour only.
 
 
-| The show around the box | iOS Simulator (software GL, 1.4-3.9 FPS, so only looked at) and Android 37 (emulator), release builds: seams, light curtain, shock waves, sparks, dust, camera punch, hold to open | ✅ looked at with screenshots ([docs/EFFECTS.md](EFFECTS.md)); Android through a whole opening on a quiet machine: 10 windows, 58 FPS on average, 48-60 per window (the two lowest are the startup) |
+| The show around the box | iOS Simulator (WebGPU, 60 FPS) and Android 37 (emulator), release builds: seams, light curtain, shock waves, sparks, dust, camera punch, hold to open | ✅ looked at with screenshots ([docs/EFFECTS.md](EFFECTS.md)); Android through a whole opening on a quiet machine: 10 windows, 58 FPS on average, 48-60 per window (the two lowest are the startup) |

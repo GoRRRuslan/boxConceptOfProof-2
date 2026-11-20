@@ -10,7 +10,8 @@ Start here. Each row says what a document is for, so you can open the right one 
 | Run the app on an emulator or simulator | [../README.md → Just try it](../README.md#just-try-it-recommended-for-reviewers) |
 | Understand the architecture and where code lives | [../README.md → Architecture](../README.md#4-project-architecture), [Project Structure](../README.md#9-project-structure) |
 | See how the 3D scene works (one canvas, hinge, render on demand) | [../README.md → Real-time 3D](../README.md#5-real-time-3d), [MODEL.md](MODEL.md) |
-| See how three.js runs on React Native (expo-gl, Metro, GPU sync) | [../README.md → three.js on expo-gl](../README.md#6-threejs-on-expo-gl) |
+| See how three.js runs on React Native (WebGPU, Metro) | [../README.md → three.js on WebGPU](../README.md#6-threejs-on-webgpu) |
+| **See why expo-gl was dropped and how the three repositories compare (FPS, Metal vs OpenGL ES)** | **[RENDERING_REPORT.md](RENDERING_REPORT.md)** |
 | See every animation, where it lives and how it works | [ANIMATIONS.md](ANIMATIONS.md) |
 | See the show around the box (seams, light, sparks, shock waves, camera punch) | [EFFECTS.md](EFFECTS.md) |
 | **Test the app (rules, iOS, Android, FPS)** | **[TESTING.md](TESTING.md)** |
@@ -31,5 +32,6 @@ Start here. Each row says what a document is for, so you can open the right one 
 | [TESTING.md](TESTING.md) | Testing guide and the golden rules |
 | [TEST_CHECKLIST.md](TEST_CHECKLIST.md) | Cases, results per platform, bugs found, gaps |
 | [PERFORMANCE.md](PERFORMANCE.md) | FPS report: numbers, method, startup, limits |
+| [RENDERING_REPORT.md](RENDERING_REPORT.md) | The three renderers compared; why expo-gl is out |
 | [MODEL.md](MODEL.md) | The 3D box model: parts, pivots, materials |
 | `media/` | Screenshots |

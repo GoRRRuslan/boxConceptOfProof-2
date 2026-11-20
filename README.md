@@ -20,7 +20,7 @@
 3. [The App](#3-the-app)
 4. [Project Architecture](#4-project-architecture)
 5. [Real-time 3D](#5-real-time-3d)
-6. [three.js on expo-gl](#6-threejs-on-expo-gl)
+6. [three.js on WebGPU](#6-threejs-on-webgpu)
 7. [Quality Gates and Tests](#7-quality-gates-and-tests)
 8. [Performance](#8-performance)
 9. [Project Structure](#9-project-structure)
@@ -34,7 +34,7 @@
 **Project Overview:**
 Mystery Watch R3F is a proof of concept for discovering, buying and opening mystery boxes that contain watches. A scrollable catalogue shows **real-time rendered 3D boxes**, you tap one to **inspect it with your finger and open it** with an animated lid and a reveal, a virtual balance pays for it, and the watches you win go into your collection. The assignment is in [docs/ASSIGNMENT.md](docs/ASSIGNMENT.md).
 
-The 3D layer is **three.js through React Three Fiber on expo-gl**: one GL canvas behind the list and a render loop in JavaScript.
+The 3D layer is **three.js through React Three Fiber, drawn with WebGPU** (`react-native-webgpu`: Metal on iOS, Vulkan on Android): one canvas behind the list and a render loop in JavaScript. It used to be expo-gl (OpenGL ES); [why it was dropped](docs/RENDERING_REPORT.md).
 
 The code base follows the conventions of an enterprise React Native app: feature-based **flows**, logic-less UI, **facades** for business logic, **adapters** for data mapping, Zustand for client state and React Query for async (mock-API) state.
 
@@ -42,11 +42,11 @@ The code base follows the conventions of an enterprise React Native app: feature
 - the full flow works: browse → inspect → buy → open → reveal → collection
 - every successful purchase makes **exactly one balance deduction and one watch** (also under repeated taps and lost responses)
 - a failed purchase **changes nothing** (balance and collection stay the same) and can be retried
-- the 3D scene holds **60 FPS** while scrolling, turning and opening — **demonstrated on Android; not demonstrated on iOS** (the iOS Simulator renders OpenGL ES in software, see [Performance](#8-performance))
+- the 3D scene holds **60 FPS** while scrolling, turning and opening on the iOS Simulator and, apart from short 30 FPS stretches at the start and during the opening, on the Android Emulator (see [Performance](#8-performance))
 
 **Key Features:**
 
-- 🧊 Real-time 3D with **three.js** through **React Three Fiber** (`@react-three/fiber/native`) on **expo-gl**
+- 🧊 Real-time 3D with **three.js** through **React Three Fiber** drawn with **WebGPU** (`react-native-webgpu`)
 - 🎯 **One shared canvas** for the whole app — the same box instances are in the list and in the opening screen
 - 🔩 Exact **hinge kinematics** for the lid and wordmark (pivot `[0, 0.914876, 0.359181]`, 0° → 115°)
 - ✋ **Inspect with your fingers:** drag with inertia, pinch to zoom, double tap to reset, swipe up to open, device tilt; anticipation shake, animated lid with light from inside, rarity-based reveal (Common → Legendary), sounds and haptics
@@ -65,7 +65,7 @@ The code base follows the conventions of an enterprise React Native app: feature
 |---|---|
 | Framework | Expo SDK 58, React Native 0.88.1 (new architecture), React 19.3 |
 | Language | TypeScript 6.0 (strict) |
-| 3D | `three` 0.187 + `@react-three/fiber` 9 (`/native`) + `expo-gl` |
+| 3D | `three` 0.187 + `@react-three/fiber` 9 (`/native`) + `react-native-webgpu` (WebGPU, Dawn) |
 | Animation / gestures | Reanimated 4.7 + `react-native-worklets` 0.13, Gesture Handler 3, Haptics |
 | State | Zustand 5 (client), TanStack Query 5 (mock API) |
 | Navigation | React Navigation 7 (bottom tabs) |
@@ -106,7 +106,7 @@ yarn androidRun        # Android emulator / device
 yarn start
 ```
 
-> The app is a **development build** (`expo-dev-client`): `expo-gl` is a native module and is not in Expo Go.
+> The app is a **development build** (`expo-dev-client`): `react-native-webgpu` is a native module and is not in Expo Go.
 
 ### Just try it (recommended for reviewers)
 
@@ -124,7 +124,7 @@ yarn iosRunRelease
 
 What to expect: scroll the list, tap a box, drag / pinch / double-tap it, buy it, swipe up (or tap *Open the box*), watch the reveal, then look at *Collection*. Each successful purchase costs exactly once and adds exactly one watch.
 
-About smoothness: on **Android** the app renders at a steady 60 FPS, in the emulator window and headless (see [Performance](#8-performance)). On the **iOS Simulator** it is slow (1.4 to 3.9 FPS) because the Simulator draws OpenGL ES with Apple's CPU renderer; that says nothing about a real iPhone, and it is the reason to judge smoothness on Android first. Give a freshly booted emulator a minute to finish its post-boot work.
+About smoothness: the scene is drawn by the GPU (Metal on iOS), so the **iOS Simulator** runs it at 60 FPS too (see [Performance](#8-performance)). Run the **Android Emulator with the host GPU** (`emulator -avd <name> -gpu host`): its default mode is SwiftShader, a CPU renderer. Give a freshly booted emulator a minute to finish its post-boot work.
 
 ### Run the quality gates
 
@@ -237,7 +237,7 @@ The mock API (`src/networking/api/MysteryBoxApi`) is asynchronous (700 ms), idem
 │                Query over the mock API       │  async (mock) API
 ├─────────────────────────────────────────────┤
 │ Services       animation · sounds · haptics  │  one job each, no UI
-│                boxModel · sceneSync · gpuSync│
+│                boxModel · sceneSync        │
 │                performance                   │
 ├─────────────────────────────────────────────┤
 │ Rendering      three.js scene · R3F          │  per-frame 3D
@@ -245,7 +245,7 @@ The mock API (`src/networking/api/MysteryBoxApi`) is asynchronous (700 ms), idem
 ├─────────────────────────────────────────────┤
 │ Navigation     tab navigator                 │
 ├─────────────────────────────────────────────┤
-│ Platform       Expo / React Native / expo-gl │
+│ Platform       Expo / React Native / WebGPU │
 └─────────────────────────────────────────────┘
 ```
 
@@ -325,7 +325,7 @@ There is one GL context and one R3F canvas (`CatalogueScene`) behind a list of t
 ┌──────────────── FlashList (transparent cards) ────────────────┐
 │  name · price · prize         ← React Native views            │
 ├───────────────────────────────────────────────────────────────┤
-│  ONE R3F Canvas on expo-gl (behind the list)                  │
+│  ONE R3F canvas on WebGPU (behind the list)                   │
 │   box #1   box #2   box #3 …   ← one GLB, one instance a card │
 └───────────────────────────────────────────────────────────────┘
         ▲ every frame: pose of each box = f(scroll offset, opening state)
@@ -336,7 +336,6 @@ There is one GL context and one R3F canvas (`CatalogueScene`) behind a list of t
 - When a box is opened, React writes a tiny state (which box, start times, targets); the loop computes the fly-in, the camera push, the lid angle, the glow, the drag inertia and the putting-away by itself ([`computeOpeningPose`](src/flows/openingFlow/_facadesLogic/computeOpeningPose.ts), [`openingSceneState`](src/flows/openingFlow/_facadesLogic/openingSceneState.ts), [`stepDragInertia`](src/flows/openingFlow/_facadesLogic/stepDragInertia.ts)).
 - **Where per-frame work runs:** on the JS thread inside `useFrame`. The cost is a few transforms for at most ~5 visible boxes, so JavaScript is not the bottleneck; the GPU is ([Performance](docs/PERFORMANCE.md)).
 - **Render on demand:** `frameloop` is `always` while something moves and goes back to `demand` after a run of quick frames ([`RenderOnDemand`](src/components/RenderOnDemand)), so the GPU rests on a still screen.
-- **GPU sync** (`services/gpuSync`): a one-pixel read-back after each frame gives the JS loop back-pressure and makes the FPS meter truthful (expo-gl otherwise queues GL commands and JavaScript runs ahead of the GPU).
 - **Look:** lights, shadows only while a box is inspected or opened, a finish that gets glossier with the box price ([`sceneRenderConfig.ts`](src/flows/catalogueFlow/_config/sceneRenderConfig.ts)); settings per platform are explained in [Performance](docs/PERFORMANCE.md).
 
 ### What the scene reads every frame
@@ -356,16 +355,16 @@ The lid (`Shell_Lid`) and the wordmark (`Shell_Wordmark`) have identity node tra
 
 ---
 
-## 6. three.js on expo-gl
+## 6. three.js on WebGPU
 
 React Native has no WebGL, no DOM and no Web Workers. Everything that makes three.js run here is a small, documented decision:
 
-- **`@react-three/fiber/native`** renders into an **`expo-gl`** context; no `<canvas>` and no browser APIs. The packages come from npm, there is **no vendored source and no native 3D code** in the repository.
-- **Metro resolves `three` to its ES-module build** ([`metro.config.js`](metro.config.js)); the CommonJS entry needs `process.emitWarning`, which React Native does not have.
+- **`react-native-webgpu`** (Dawn: **Metal on iOS, Vulkan on Android**) gives a WebGPU context; [`WebGpuCanvas`](src/components/WebGpuCanvas/WebGpuCanvas.tsx) creates a `WebGPURenderer` on it and hands it to React Three Fiber (`createRoot` from `@react-three/fiber/native`, which also supplies the Blob and texture polyfills). `context.present()` runs after every frame. The packages come from npm: **no vendored source, no native 3D code of our own**.
+- **Metro resolves `three` to its WebGPU build** (`three.webgpu.js`, which contains the whole core), see [`metro.config.js`](metro.config.js). Standard three.js materials (`MeshStandardMaterial`, `MeshPhysicalMaterial`, `MeshBasicMaterial`) are converted to node materials by the renderer; nothing in the scene code is WebGPU-specific.
 - **The model is an uncompressed GLB.** Draco and KTX2 decoders need Web Workers and WASM, which React Native lacks. [`scripts/assets/optimizeBoxModel.sh`](scripts/assets/optimizeBoxModel.sh) rebuilds the file from `assets-source/`; the watch images are WebP ([`optimizeWatchImages.sh`](scripts/assets/optimizeWatchImages.sh)).
-- **GPU back-pressure.** expo-gl queues GL commands, so JavaScript can run ahead of the GPU. After every frame the app reads one pixel back (`services/gpuSync`); a frame counts only when the GPU has finished it.
-- **No reflection environment** (`IS_ENVIRONMENT_ENABLED = false`): on the iOS Simulator the PMREM environment cost about 14 s at start and slowed the frames. Details in [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
-- **Render resolution and MSAA are per platform** (`sceneRenderConfig.ts`): Android runs at full native resolution with MSAA off; iOS keeps a reduced scale with MSAA.
+- **Full quality everywhere:** native resolution, 4x MSAA, 2048 shadow map with shadows always on (switching them recompiles every material, a stall of about a second), a reflection environment (PMREM), tone mapping and the clear coat. With expo-gl none of these fitted: see [docs/RENDERING_REPORT.md](docs/RENDERING_REPORT.md).
+- **Sounds are prepared at idle** (`soundEffects.prepare`): creating the audio session and the first player on the first sound blocks JavaScript for about a second.
+- **Android emulator:** use the host GPU (`-gpu host`). The default mode is SwiftShader (software Vulkan), which gives about 10 to 30 FPS.
 
 ---
 
@@ -375,7 +374,7 @@ React Native has no WebGL, no DOM and no Web Workers. Everything that makes thre
 
 ```bash
 yarn ciPipeline   # eslint . && tsc --noEmit      → must be clean
-yarn test         # jest                            → 258 tests, 45 suites
+yarn test         # jest                            → 271 tests
 yarn doctor       # expo-doctor
 ```
 
@@ -383,9 +382,9 @@ yarn doctor       # expo-doctor
 |---|---|
 | ESLint (strict-type-checked, stylistic, react-native, react-hooks) | ✅ clean |
 | TypeScript 6 strict | ✅ clean |
-| Jest + RNTL | ✅ 258 / 258 |
+| Jest + RNTL | ✅ 271 / 271 |
 | Full flow on Android 37, including the animations | ✅ (see [checklist](docs/TEST_CHECKLIST.md)) |
-| Full flow on the iOS Simulator | ⚠️ works, but the Simulator is too slow to judge smoothness (see [Performance](#8-performance)) |
+| Full flow on the iOS Simulator | ✅ 60 FPS (see [Performance](#8-performance)) |
 
 **What the tests cover**
 
@@ -394,7 +393,7 @@ yarn doctor       # expo-doctor
 | Purchase rules | store (lock, exactly-once, failure, retry key), mock API (idempotency, latency, failure modes, prize roll), `runBoxPurchase` end to end, the mutation hook |
 | Opening | phase machine, easing and progress, scene state (focus, lid, anticipation, glow, putting away), pose maths, drag inertia, rarity, particle paths, the opening facade end to end |
 | Catalogue / collection | pose maths, camera field of view, entrance and press maths, finishes, card and row adapters, both facades, collection value |
-| 3D plumbing | `createSharedValue`, `createBoxInstance`, `installGpuSync`, `resolveEntranceStart`, `RenderOnDemand` |
+| 3D plumbing | `createSharedValue`, `createBoxInstance`, `resolveEntranceStart`, `RenderOnDemand` |
 | UI | `BoxCard`, `OpeningOverlay`, `CatalogueScreen`, `CollectionScreen`, `ScreenHeader`, `AnimatedCurrencyText`, `AppButton` |
 | Services | animated numbers, sounds (player pool), device tilt, FPS summary |
 
@@ -404,18 +403,11 @@ Not unit-tested (verified on devices instead): the real look of the animations, 
 
 ## 8. Performance
 
-**Result: 60 FPS on the Android Emulator in every window after the first, in the catalogue, in inspect and through the whole opening flow. The iOS Simulator runs at 1.4 to 3.9 FPS** because it draws OpenGL ES in software; the 60 FPS target is **not demonstrated on iOS**, and no physical device has been measured. Full report: [docs/PERFORMANCE.md](docs/PERFORMANCE.md). How to run the measurements: [docs/TESTING.md](docs/TESTING.md).
+**Result (release builds, simulator and emulator on an Apple Silicon Mac): the iOS Simulator runs the whole flow at 60 FPS (36 one-second windows, average 59.8; one window of 52 FPS at app start, while the first frames compile pipelines). The Android Emulator with the host GPU holds 60 FPS in the catalogue and in inspect, with stretches of 30 FPS during the entrance and parts of the opening (JavaScript-bound, see below).** Compared with the other two repositories and the reasons: [docs/RENDERING_REPORT.md](docs/RENDERING_REPORT.md). Full numbers: [docs/PERFORMANCE.md](docs/PERFORMANCE.md). How to run the measurements: [docs/TESTING.md](docs/TESTING.md).
 
-| Scenario (Android Emulator, release) | Result |
-|---|---|
-| Catalogue scrolling by itself, headless, 39 s | 60 FPS after the first window; 1 slow frame |
-| Catalogue scrolling by itself, emulator window, 44 s | 60 FPS after the first window |
-| Inspect a box, 12 s | 60 FPS, worst frame 20 ms / 22.5 ms |
-| Buy → anticipation → lid → reveal (window) | 60 FPS, worst frame 25 ms |
-
-- Frame rate comes from an **in-app FPS meter** that counts R3F frames (`useFrame`) after the GPU has finished each one (`services/gpuSync`), cross-checked with `dumpsys gfxinfo` on Android
-- What the 60 FPS depends on: MSAA off on Android, full native resolution on Android, shadows only while a box is inspected, shadow map 512, no reflection environment, render on demand
-- **Run one platform at a time** (they share the Mac's GPU and CPU, so running both gives false jank). Use release builds. For exact numbers boot the Android emulator headless (`yarn androidEmulatorStart`)
+- Frame rate comes from an **in-app FPS meter** that counts R3F frames (`useFrame`), one-second windows, plus the sink log in `docs/data`.
+- No physical device has been measured.
+- **Run one platform at a time** (they share the Mac's GPU and CPU, so running both gives false jank). Use release builds. Start the Android emulator with `-gpu host`.
 
 | Command | Purpose |
 |---|---|
@@ -455,7 +447,7 @@ boxConceptOfProof-2/
 └── src/
     ├── app/                          # App.tsx, useAppFacade.ts, App.styles.ts
     ├── assets/                       # models/box.glb · images/watches/{full,thumb}/*.webp · sounds/*.wav
-    ├── components/                   # shared UI: ScreenHeader · AnimatedCurrencyText · FadingView · RenderOnDemand · FrameMeter · PerformanceOverlay · AppText · buttons/AppButton · _layout/ScreenContainer
+    ├── components/                   # shared UI: ScreenHeader · AnimatedCurrencyText · FadingView · RenderOnDemand · FrameMeter · WebGpuCanvas · PerformanceOverlay · AppText · buttons/AppButton · _layout/ScreenContainer
     ├── navigation/                   # tab navigator (hides its bar while a prize is shown), navigation container + theme, route types
     ├── models/mainStorage/           # WalletStore · CollectionStore · PurchaseStore · _storeConfigured (session-scoped Zustand)
     ├── networking/                   # api/MysteryBoxApi (mock, prize roll) · requests/{queries,mutations} · errorHandling
@@ -464,7 +456,7 @@ boxConceptOfProof-2/
     │   ├── openingFlow/              # _config (timings, rarity) · _facades (opening, device tilt) · _facadesLogic (phases, scene state, pose, inertia, rarity) · screens/OpeningOverlay (RevealEffects, WatchRevealImage, Particle)
     │   └── collectionFlow/           # _adapters · _facades · _facadesLogic · screens/CollectionScreen (WatchListItem, CollectionDetailModal, EmptyCollection)
     ├── i18next/                      # i18init.ts · translations/en.json
-    ├── services/                     # animation · boxModel (GLB loader, instances) · sceneSync (shared cells) · gpuSync · lidHinge · sounds · haptics · performance (FPS meter, startup timeline) · reactQuery
+    ├── services/                     # animation · boxModel (GLB loader, instances) · sceneEffects · sceneSync (shared cells) · lidHinge · sounds · haptics · performance (FPS meter, startup timeline) · reactQuery
     └── utils/                        # designSystem/Theme · formatCurrency · delay · watchImageSources · testing/reanimatedStub
 ```
 
@@ -472,12 +464,11 @@ boxConceptOfProof-2/
 
 ## 10. Known Limits and Decisions
 
-- **The iOS Simulator cannot show the real speed.** It renders OpenGL ES with Apple's CPU renderer (1.4 to 3.9 FPS). 60 FPS is demonstrated on the Android Emulator only; neither a physical iPhone nor a physical Android phone has been measured.
-- **Simulators/emulators only.** All numbers come from the Android Emulator (MW_Pixel9_API_37) on an Apple Silicon Mac; its GPU is much faster than a phone's.
+- **Simulators/emulators only.** Neither a physical iPhone nor a physical Android phone has been measured. On Android the frame loop is JavaScript-bound during the entrance and the opening (30 FPS stretches on the emulator); the other two repositories do that work natively.
+- **All numbers come from the iOS Simulator and the Android Emulator (host GPU)** on an Apple Silicon Mac; that GPU is much faster than a phone's.
 - **One platform at a time** when testing or measuring (shared Mac GPU and CPU); see [docs/TESTING.md](docs/TESTING.md#rule-1-one-platform-at-a-time).
 - **Frame loop on the JS thread.** `useFrame` runs in JavaScript, not on a UI or render thread. It is fast enough for a handful of boxes, but heavy JavaScript work during an animation would show up as dropped frames.
 - **No Draco / KTX2.** Their decoders need Web Workers, so the GLB is uncompressed.
-- **No reflection environment** and **shadows only in inspect/opening** — chosen for frame rate, see [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 - **Session-only state:** the balance ($1,000), the collection and the purchase log live in memory; a restart begins a new session.
 - **Prize roll is deterministic per purchase key** in the mock (so a retry can never turn into a different watch); the odds come from each box's drop table.
 - **Camera and light are fixed;** the opening "push-in" is done by moving and scaling the box.
@@ -495,8 +486,8 @@ boxConceptOfProof-2/
 | iOS app crashes at launch on iOS 27 | Xcode 27 requires the UIScene lifecycle; use **Expo SDK 58+** (this project) |
 | `expo run:ios` ends with an osascript error about the *Simulator* window | Xcode 27 ships **DeviceHub.app** instead of Simulator.app. The app is already installed: run `yarn start` and open it (`xcrun simctl launch booted com.gorrr.mysterywatch.r3f`) |
 | Blank screen on Android after adding navigation | The root container must be `flex: 1` without `alignItems: center` (see `App.styles.ts`) |
-| iOS: everything is very slow, 1 to 4 FPS | Expected on the Simulator (software OpenGL ES). Judge smoothness on the Android Emulator or a real device |
-| Metro fails with `process.emitWarning` / `three` import errors | `metro.config.js` must resolve `three` to its ES-module build; do not remove that resolver |
+| Android emulator: 10 to 30 FPS, jagged edges | The emulator is in SwiftShader (software) mode: start it with `emulator -avd <name> -gpu host` |
+| Metro fails with `process.emitWarning` / `three` import errors | `metro.config.js` must resolve `three` to the WebGPU build (`three.webgpu.js`); do not remove that resolver |
 | Choppy frames, FPS well below 60 on Android | First check that **only one** simulator/emulator is running (`adb devices`, `xcrun simctl list devices booted`) and that you installed a **release** build; see [docs/TESTING.md](docs/TESTING.md#1-the-golden-rules) |
 | Android emulator feels slow | Let a freshly booted emulator settle for a minute, use an AVD with ≥ 4 cores / ≥ 4 GB / `hw.gpu.mode=host`, and install a **release** build (`yarn androidRunRelease`), not the development client |
 | Android emulator window does not open from a script or sandboxed shell | The windowed emulator needs a GUI session; start it from Android Studio or a normal terminal, or use the headless start (`yarn androidEmulatorStart`) |
