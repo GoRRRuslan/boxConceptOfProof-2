@@ -632,6 +632,28 @@ describe('useOpeningFacade', () => {
       expect((result.current.dragState.getBlocking() as { yawRadians: number }).yawRadians).toBeGreaterThan(0)
     })
 
+    it('turns the box vertically with the finger inverted: dragging up pitches it up, dragging down pitches it down', async () => {
+      const { result } = await renderFacade()
+
+      await act(() => {
+        result.current.handleCardPress(EBoxIdentifier.Starter)
+      })
+
+      await act(() => {
+        getGestures(result).pan.onUpdate({ changeX: 0, changeY: -20 })
+      })
+
+      const pitchAfterDraggingUp = (result.current.dragState.getBlocking() as { pitchRadians: number }).pitchRadians
+
+      expect(pitchAfterDraggingUp).toBeGreaterThan(0)
+
+      await act(() => {
+        getGestures(result).pan.onUpdate({ changeX: 0, changeY: 40 })
+      })
+
+      expect((result.current.dragState.getBlocking() as { pitchRadians: number }).pitchRadians).toBeLessThan(pitchAfterDraggingUp)
+    })
+
     it('swiping up on a bought box opens it, a short swipe does not', async () => {
       jest.useFakeTimers()
 

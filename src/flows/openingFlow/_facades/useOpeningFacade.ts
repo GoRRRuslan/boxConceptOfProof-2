@@ -284,12 +284,13 @@ export const useOpeningFacade = ({ boxesData, cards }: IUseOpeningFacadeParams):
 
       setIsDragging(true)
     },
+    // Vertical drag is inverted on purpose: the finger moving up turns the top of the box up (and down turns it down).
     onUpdate: event => {
       dragState.setBlocking(
         applyDragMovement(
           dragState.getBlocking(),
           event.changeX,
-          phase === EOpeningPhase.Ready ? 0 : event.changeY,
+          phase === EOpeningPhase.Ready ? 0 : -event.changeY,
           DRAG_RADIANS_PER_PIXEL,
           Date.now(),
         ),
@@ -300,7 +301,7 @@ export const useOpeningFacade = ({ boxesData, cards }: IUseOpeningFacadeParams):
         releaseDrag(
           dragState.getBlocking(),
           event.velocityX * DRAG_RADIANS_PER_PIXEL,
-          phase === EOpeningPhase.Ready ? 0 : event.velocityY * DRAG_RADIANS_PER_PIXEL,
+          phase === EOpeningPhase.Ready ? 0 : -event.velocityY * DRAG_RADIANS_PER_PIXEL,
           Date.now(),
         ),
       )

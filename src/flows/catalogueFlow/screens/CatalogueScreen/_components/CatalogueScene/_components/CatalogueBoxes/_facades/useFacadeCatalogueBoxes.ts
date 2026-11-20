@@ -29,7 +29,10 @@ import {
   getIridescenceStrength,
   getPopElapsedMilliseconds,
   getRarityProfile,
+  extrapolateScrollOffset,
+  stepParallaxOffset,
   stepScrollSway,
+  stepScrollVelocity,
 } from '@flows/openingFlow/_facadesLogic/computeSceneEffects'
 import type { IOpeningPose } from '@flows/openingFlow/_types'
 import { applySceneEffects } from '@services/sceneEffects/applySceneEffects'
@@ -73,8 +76,11 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
   const lastSeamIntensity = useRef<number>(-1)
   // The last iridescence tint written to every box (so a material is only touched when the shimmer really moved).
   const lastIridescenceTints = useRef<number[][]>([])
-  // Scroll speed -> sway of the boxes: the last offset and time we saw, and the filtered sway.
-  const swayState = useRef<[number, number, number]>([0, 0, 0])
+  // Scroll speed -> sway of the boxes: [last offset, time it changed, smoothed scroll speed], the filtered sway, and the smoothed offset
+  // the parallax turn of the boxes is computed from.
+  const scrollVelocityState = useRef<[number, number, number]>([0, 0, 0])
+  const swayState = useRef<number>(0)
+  const parallaxOffsetState = useRef<number | null>(null)
   const { effectsRoot, effects, auraColors, tintCache } = useFacadeSceneEffects(cards, viewportWidth / Math.max(1, viewportHeight))
   const instances: IBoxInstance[] = useMemo(
     () =>
@@ -154,12 +160,18 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
       (scene.lidTarget === 1 ? computeLidSettleDegrees(popElapsed) : 0)
 
     // The boxes sway against the direction of a fast scroll.
-    const [lastScrollOffset, lastScrollTime, previousSway] = swayState.current
-    const scrollDeltaSeconds = (nowMilliseconds - lastScrollTime) / 1000
-    const scrollVelocity = scrollDeltaSeconds > 0 && scrollDeltaSeconds < 0.2 ? (currentScrollOffset - lastScrollOffset) / scrollDeltaSeconds : 0
-    const sway = stepScrollSway(previousSway, scrollVelocity, deltaSeconds)
+    const frameSeconds = Math.min(deltaSeconds, MAXIMUM_FRAME_SECONDS)
+    const scrollVelocity = stepScrollVelocity(scrollVelocityState.current, currentScrollOffset, nowMilliseconds, frameSeconds)
+    const sway = stepScrollSway(swayState.current, scrollVelocity[2], frameSeconds)
+    const listScrollOffset = extrapolateScrollOffset(currentScrollOffset, scrollVelocity[2], scrollVelocity[1], nowMilliseconds)
+    const parallaxOffset =
+      parallaxOffsetState.current === null ? listScrollOffset : stepParallaxOffset(parallaxOffsetState.current, listScrollOffset, frameSeconds)
 
-    swayState.current = [currentScrollOffset, nowMilliseconds, sway]
+    scrollVelocityState.current = scrollVelocity
+
+    swayState.current = sway
+
+    parallaxOffsetState.current = parallaxOffset
 
     // Inspection physics: inertia after a flick, gliding back after a double tap, slow auto-rotation when left alone.
     const isAutoRotateAllowed = scene.focusTarget === 1 && scene.lidTarget === 0 && focusLinearProgress >= 1
@@ -188,8 +200,10 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
     let shakeX = 0
 
     instances.forEach(({ root }, cardIndex) => {
-      const baseListPose = computeBoxPose({ cardIndex, scrollOffset: currentScrollOffset, viewportHeight })
-      const listPose = { ...baseListPose, yawRadians: baseListPose.yawRadians + sway, pitchRadians: baseListPose.pitchRadians + sway * 0.5 }
+      const baseListPose = computeBoxPose({ cardIndex, scrollOffset: listScrollOffset, viewportHeight })
+      // Where the box is (and how big) follows the list at once; how it TURNS with its place on the screen follows a smoothed offset.
+      const parallaxYawRadians = computeBoxPose({ cardIndex, scrollOffset: parallaxOffset, viewportHeight }).yawRadians
+      const listPose = { ...baseListPose, yawRadians: parallaxYawRadians + sway, pitchRadians: baseListPose.pitchRadians + sway * 0.5 }
       const entranceScale = computeEntranceScale(nowMilliseconds - entranceStart - cardIndex * ENTRANCE_STAGGER_MILLISECONDS)
       const squeeze = press.cardIndex === cardIndex ? pressScale : 1
       const openingPose = computeOpeningPose({
