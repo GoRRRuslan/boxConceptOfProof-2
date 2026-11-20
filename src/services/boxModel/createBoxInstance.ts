@@ -28,6 +28,8 @@ export interface IBoxInstance {
   glowMaterials: MeshStandardMaterial[]
   // The coloured trim of the seam: it lights up when the box is armed and while it opens.
   seamMaterials: MeshStandardMaterial[]
+  // The outer body (base and lid): its colour shimmers on the glossy boxes (iridescence).
+  bodyMaterials: MeshPhysicalMaterial[]
 }
 
 // The mesh of every primitive of a part: a one-primitive part is a Mesh, a part with several
@@ -74,6 +76,7 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
   const root = new Group()
   const glowMaterials: MeshStandardMaterial[] = []
   const seamMaterials: MeshStandardMaterial[] = []
+  const bodyMaterials: MeshPhysicalMaterial[] = []
 
   for (const { partName, primitiveIndex } of BODY_TARGETS) {
     const part = findPart(model, partName)
@@ -102,6 +105,8 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
     material.polygonOffsetUnits = -1
 
     mesh.material = material
+
+    bodyMaterials.push(material)
   }
 
   for (const { partName, primitiveIndex } of GLOW_TARGETS) {
@@ -151,5 +156,5 @@ export const createBoxInstance = (template: Object3D, look: IBoxLook, castShadow
     return part ? [part] : []
   })
 
-  return { root, lidParts, glowMaterials, seamMaterials }
+  return { root, lidParts, glowMaterials, seamMaterials, bodyMaterials }
 }

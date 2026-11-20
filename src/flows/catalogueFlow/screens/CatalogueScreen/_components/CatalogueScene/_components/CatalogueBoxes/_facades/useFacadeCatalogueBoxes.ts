@@ -22,9 +22,11 @@ import {
 import { isDragStateAnimating, stepDragInertia } from '@flows/openingFlow/_facadesLogic/stepDragInertia'
 import {
   computeCameraPunch,
+  computeIridescenceTint,
   computeJitterScale,
   computeLidSettleDegrees,
   computeSeamIntensity,
+  getIridescenceStrength,
   getPopElapsedMilliseconds,
   getRarityProfile,
   stepScrollSway,
@@ -69,6 +71,8 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
   const lastGlowStrength = useRef<number>(0)
   const lastGlowCardIndex = useRef<number>(-1)
   const lastSeamIntensity = useRef<number>(-1)
+  // The last iridescence tint written to every box (so a material is only touched when the shimmer really moved).
+  const lastIridescenceTints = useRef<number[][]>([])
   // Scroll speed -> sway of the boxes: the last offset and time we saw, and the filtered sway.
   const swayState = useRef<[number, number, number]>([0, 0, 0])
   const { effectsRoot, effects, auraColors, tintCache } = useFacadeSceneEffects(cards)
@@ -218,6 +222,24 @@ export const useFacadeCatalogueBoxes = ({ cards, viewport, sceneSync }: IUseFaca
       const isShown = pose.isVisible && pose.scale > MINIMUM_VISIBLE_SCALE
 
       poses.push(pose)
+
+      // Iridescence: the glossy boxes shimmer with the turn of the box (colour added to the base colour).
+      const iridescenceStrength = getIridescenceStrength(cards[cardIndex].finish.metallic)
+
+      if (iridescenceStrength > 0 && isShown) {
+        const tint = computeIridescenceTint(iridescenceStrength, pose.yawRadians, pose.pitchRadians, nowMilliseconds)
+        const previousTint = lastIridescenceTints.current[cardIndex] as number[] | undefined
+
+        if (!previousTint || Math.abs(previousTint[0] - tint[0]) + Math.abs(previousTint[1] - tint[1]) + Math.abs(previousTint[2] - tint[2]) > 0.006) {
+          const [baseRed, baseGreen, baseBlue] = cards[cardIndex].colorLinearRgba
+
+          instances[cardIndex].bodyMaterials.forEach(material => {
+            material.color.setRGB(Math.max(0, baseRed + tint[0]), Math.max(0, baseGreen + tint[1]), Math.max(0, baseBlue + tint[2]))
+          })
+
+          lastIridescenceTints.current[cardIndex] = tint
+        }
+      }
 
       if (isFocusedCard) {
         focusedPose = pose
