@@ -41,7 +41,7 @@ export const SHADOW_NORMAL_BIAS = 0.06
 export const TONE_MAPPING_EXPOSURE = 1.05
 // MSAA samples are requested from expo-gl (4 samples, "antialias: true" on the Canvas). Off on Android: with MSAA the
 // emulator fell to 15 FPS at render scale 0.5; without it the full native resolution holds 60 FPS (docs/PERFORMANCE.md).
-export const IS_ANTIALIASING_ENABLED = Platform.OS !== 'android' && !(IS_SOFTWARE_RENDERER && process.env.EXPO_PUBLIC_SOFT_AA === '0')
+export const IS_ANTIALIASING_ENABLED = true
 
 // Feature switches (documented in docs/ANIMATIONS.md; used to find what a GL driver cannot take).
 export const IS_ENVIRONMENT_ENABLED = true
