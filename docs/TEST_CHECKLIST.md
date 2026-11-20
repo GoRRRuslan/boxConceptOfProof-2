@@ -37,3 +37,6 @@ Android Emulator MW_Pixel9_API_37 (60 FPS) and iOS Simulator iPhone 17 (software
 - No ambient occlusion, no bloom; no reflection environment (a flag, too slow in software GL); shadows only while a box is inspected.
 - iOS renders at 0.37 of the native resolution with MSAA (Android: full resolution, MSAA off), so iOS edges are softer.
 - The glow is an emissive colour only.
+
+
+| The show around the box | iOS Simulator (software GL, 1.4-3.9 FPS, so only looked at) and Android 37 (emulator), release builds: seams, light curtain, shock waves, sparks, dust, camera punch, hold to open | ✅ looked at with screenshots ([docs/EFFECTS.md](EFFECTS.md)); Android through a whole opening on a quiet machine: 10 windows, 58 FPS on average, 48-60 per window (the two lowest are the startup) |
