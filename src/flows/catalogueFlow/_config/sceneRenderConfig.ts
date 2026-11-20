@@ -29,13 +29,13 @@ export const SCENE_LIGHTS: ISceneLight[] = [
 
 // Reflections of the environment (what makes glossy and metallic boxes look glossy and metallic).
 // A procedurally built "room" (three.js RoomEnvironment) filtered once into a PMREM cube map.
-export const ENVIRONMENT_INTENSITY = 0.25
+export const ENVIRONMENT_INTENSITY = 0.12
 
 // Real shadows: the lid shades the inside of the box, the box shades its own lower edge.
-export const SHADOW_MAP_SIZE = 512
+export const SHADOW_MAP_SIZE = 2048
 export const SHADOW_FRUSTUM_HALF_SIZE = 3.4
-export const SHADOW_BIAS = -0.0004
-export const SHADOW_NORMAL_BIAS = 0.012
+export const SHADOW_BIAS = -0.002
+export const SHADOW_NORMAL_BIAS = 0.06
 
 // Renderer settings.
 export const TONE_MAPPING_EXPOSURE = 1.05
@@ -44,7 +44,7 @@ export const TONE_MAPPING_EXPOSURE = 1.05
 export const IS_ANTIALIASING_ENABLED = Platform.OS !== 'android' && !(IS_SOFTWARE_RENDERER && process.env.EXPO_PUBLIC_SOFT_AA === '0')
 
 // Feature switches (documented in docs/ANIMATIONS.md; used to find what a GL driver cannot take).
-export const IS_ENVIRONMENT_ENABLED = false
+export const IS_ENVIRONMENT_ENABLED = true
 export const IS_SHADOWS_ENABLED = true
 // Shadows are rendered for this long right after the app starts (while the boxes pop in) and then switched off until a box is inspected:
 // the shader programs of the shadow variant are compiled during the entrance instead of as a hitch of about 200 ms when the first box

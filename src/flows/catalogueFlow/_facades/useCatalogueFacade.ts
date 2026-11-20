@@ -181,7 +181,6 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
     sceneSync,
     opening,
     phaseKey: opening.phase,
-    isInspecting: opening.phase !== EOpeningPhase.Browsing,
     isRenderContinuous,
     isPerformanceOverlayVisible: IS_PERFORMANCE_OVERLAY_VISIBLE,
     onRenderedFrame,

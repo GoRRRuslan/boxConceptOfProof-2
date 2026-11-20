@@ -62,6 +62,9 @@ interface IUseOpeningFacadeParams {
   cards: ICatalogueCard[]
 }
 
+// When the sounds are prepared: after the entrance of the boxes, before anyone has tapped anything.
+const SOUND_PREPARE_DELAY_MILLISECONDS = 2500
+
 const INTERACTIVE_PHASES = [EOpeningPhase.Inspecting, EOpeningPhase.Ready, EOpeningPhase.Revealed]
 
 const REVEAL_SOUNDS: Record<EWatchRarity, ESoundEffect> = {
@@ -375,6 +378,15 @@ export const useOpeningFacade = ({ boxesData, cards }: IUseOpeningFacadeParams):
     },
     [],
   )
+
+  // The audio session and the players are created while the app is idle after the start, not on the first sound (a stall of about a second).
+  useEffect(() => {
+    const prepareTimer = setTimeout(soundEffects.prepare, SOUND_PREPARE_DELAY_MILLISECONDS)
+
+    return () => {
+      clearTimeout(prepareTimer)
+    }
+  }, [])
 
   // ------------------------ View data ------------------------ //
   const primaryButton: IOpeningPrimaryButton | null = primaryActionState

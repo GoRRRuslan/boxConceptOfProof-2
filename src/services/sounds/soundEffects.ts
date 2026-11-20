@@ -60,8 +60,22 @@ const getPlayer = (effect: ESoundEffect): AudioPlayer => {
   return pool[index]
 }
 
+// Creates the audio session and the first player of every effect ahead of time. Doing it on the first sound blocks the JS thread for
+// about a second (a visible stall of the first selection), so it is done once, while the app is idle after the start.
+const prepare = () => {
+  Object.values(ESoundEffect).forEach(effect => {
+    try {
+      getPlayer(effect)
+    } catch {
+      // No audio output available: the app works the same without sound.
+    }
+  })
+}
+
 // Short sound effects. A device or simulator without audio must never break the app: failures are swallowed.
 export const soundEffects = {
+  prepare,
+
   play: (effect: ESoundEffect) => {
     try {
       const player = getPlayer(effect)

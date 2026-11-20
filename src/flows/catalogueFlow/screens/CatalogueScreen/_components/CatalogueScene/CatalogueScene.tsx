@@ -1,11 +1,11 @@
 import { WebGpuCanvas } from '@components/WebGpuCanvas/WebGpuCanvas'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { View } from 'react-native'
 import { ACESFilmicToneMapping, NoToneMapping, type PerspectiveCamera } from 'three'
 
 import { FrameMeter } from '@components/FrameMeter'
 import { CAMERA_DISTANCE } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
-import { IS_ANTIALIASING_ENABLED, isSoftwareSaving, IS_SHADOWS_ENABLED, RENDER_RESOLUTION_SCALE, SHADOW_WARMUP_MILLISECONDS, TONE_MAPPING_EXPOSURE } from '@flows/catalogueFlow/_config/sceneRenderConfig'
+import { IS_ANTIALIASING_ENABLED, isSoftwareSaving, IS_SHADOWS_ENABLED, RENDER_RESOLUTION_SCALE, TONE_MAPPING_EXPOSURE } from '@flows/catalogueFlow/_config/sceneRenderConfig'
 import { installCheapColorOutput } from '@services/softwareRenderer/installCheapColorOutput'
 import { computeCameraFieldOfView } from '@flows/catalogueFlow/_facadesLogic/computeCameraFieldOfView'
 import type { ICatalogueCard, ICatalogueSceneSync, ICatalogueViewport } from '@flows/catalogueFlow/_types'
@@ -24,8 +24,6 @@ interface ICatalogueSceneProps {
   viewport: ICatalogueViewport | null
   sceneSync: ICatalogueSceneSync
   phaseKey: IOpeningPhaseKey
-  // A box is inspected, opened or revealed: shadows are rendered only then (they cost a depth pass).
-  isInspecting: boolean
   isRenderContinuous: boolean
   onRenderedFrame: (timestampMilliseconds: number) => void
 }
@@ -36,28 +34,16 @@ export const CatalogueScene = ({
   viewport,
   sceneSync,
   phaseKey,
-  isInspecting,
   isRenderContinuous,
   onRenderedFrame,
 }: ICatalogueSceneProps) => {
   const styles = useMemo(() => makeStyles(RENDER_RESOLUTION_SCALE), [])
-  const [isWarmingUp, setIsWarmingUp] = useState<boolean>(true)
-  // Shadows are on while a box is inspected and during the warm-up right after the start.
-  const isShadowActive = !isSoftwareSaving('noShadows') && (isInspecting || isWarmingUp)
+  // Shadows stay on: switching them re-compiles every material (a stall of about a second), and on a real GPU the depth pass is cheap.
+  const isShadowActive = !isSoftwareSaving('noShadows')
   const camera = useMemo(
     () => ({ fov: computeCameraFieldOfView(), near: 0.1, far: 60, position: [0, 0, CAMERA_DISTANCE] as [number, number, number] }),
     [],
   )
-
-  useEffect(() => {
-    const warmUpTimer = setTimeout(() => {
-      setIsWarmingUp(false)
-    }, SHADOW_WARMUP_MILLISECONDS)
-
-    return () => {
-      clearTimeout(warmUpTimer)
-    }
-  }, [])
 
   const handleCreated = (state: { gl: { setClearColor: (color: number, alpha: number) => void; toneMappingExposure: number }; camera: unknown }) => {
     // Transparent: the list's cards and the app background show through.

@@ -27,7 +27,7 @@ jest.mock('expo-sensors', () => ({
 
 jest.mock('@services/sounds/soundEffects', () => ({
   ESoundEffect: {},
-  soundEffects: { play: jest.fn() },
+  soundEffects: { play: jest.fn(), prepare: jest.fn() },
 }))
 
 jest.mock('@services/haptics/hapticFeedback', () => ({

@@ -51,7 +51,7 @@ jest.mock('@services/sounds/soundEffects', () => ({
     RevealLegendary: 'revealLegendary',
     Error: 'error',
   },
-  soundEffects: { play: jest.fn() },
+  soundEffects: { play: jest.fn(), prepare: jest.fn() },
 }))
 
 jest.mock('@services/haptics/hapticFeedback', () => ({

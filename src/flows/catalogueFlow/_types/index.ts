@@ -61,7 +61,6 @@ export interface ICatalogueFacade {
   sceneSync: ICatalogueSceneSync
   opening: IOpeningFacade
   phaseKey: IOpeningPhaseKey
-  isInspecting: boolean
   // True while anything moves (scroll, drag, opening): the renderer must keep drawing.
   isRenderContinuous: boolean
   isPerformanceOverlayVisible: boolean
