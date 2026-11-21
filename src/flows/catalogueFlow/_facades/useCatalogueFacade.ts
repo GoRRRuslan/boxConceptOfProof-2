@@ -3,7 +3,7 @@ import { useIsFocused, useNavigation } from '@react-navigation/native'
 import type { FlashListRef } from '@shopify/flash-list'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native'
+import { AppState, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native'
 import { createSharedValue } from '@services/sceneSync/createSharedValue'
 
 import { CARD_HEIGHT, LIST_TOP_PADDING } from '@flows/catalogueFlow/_config/catalogueLayoutConfig'
@@ -22,6 +22,10 @@ import { EStartupMark, markStartup } from '@services/performance/startupTimeline
 import { useRenderFpsMeter } from '@services/performance/useRenderFpsMeter'
 
 // The list counts as "scrolling" until this long after its last scroll event (covers the fling).
+// Back from the background after at least this long: the 3D view is rebuilt (iOS may have taken its drawing surface away).
+const REBUILD_SCENE_AFTER_BACKGROUND_MILLISECONDS = 1500
+// An opening in one of these phases is closed when the user leaves the Boxes tab.
+const LEAVE_TAB_CLOSES_PHASES = [EOpeningPhase.Inspecting, EOpeningPhase.Ready, EOpeningPhase.Revealed]
 const SCROLL_IDLE_MILLISECONDS = 250
 const PRESS_RELEASE_RENDER_MILLISECONDS = 350
 // Measurement builds show the live frame-rate overlay: EXPO_PUBLIC_SHOW_PERFORMANCE=1
@@ -46,6 +50,9 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
   const [viewport, setViewport] = useState<ICatalogueViewport | null>(null)
   const [isScrolling, setIsScrolling] = useState<boolean>(false)
   const [isSceneReady, setIsSceneReady] = useState<boolean>(false)
+  // Bumped when the app comes back after a while in the background: the 3D scene is built anew (see the effect below).
+  const [sceneEpoch, setSceneEpoch] = useState<number>(0)
+  const backgroundedAt = useRef<number | null>(null)
   // A finger is on a card (or just left it): the squeeze animation needs frames.
   const [isPressing, setIsPressing] = useState<boolean>(false)
   const pressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -66,6 +73,7 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
 
   // ------------------------- Opening -------------------------- //
   const opening = useOpeningFacade({ boxesData, cards })
+  const openingRef = useRef(opening)
 
   // -------------------------- Values ------------------------- //
   // Shared with the 3D scene: written on every scroll event, read on every rendered frame.
@@ -188,6 +196,40 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
     }
   }, [viewport, cards.length])
 
+  useEffect(() => {
+    openingRef.current = opening
+  })
+
+  // After a stay in the background the 3D view could show frozen boxes or a box left over from an opening: the drawing surface is rebuilt,
+  // and the scene redraws everything from the opening state, which is the single truth.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextState => {
+      if (nextState === 'background') {
+        backgroundedAt.current = Date.now()
+
+        return
+      }
+
+      if (nextState !== 'active' || backgroundedAt.current === null) {
+        return
+      }
+
+      const awayMilliseconds = Date.now() - backgroundedAt.current
+
+      backgroundedAt.current = null
+
+      if (awayMilliseconds >= REBUILD_SCENE_AFTER_BACKGROUND_MILLISECONDS) {
+        logDiagnostic('scene.rebuild', { awayMilliseconds })
+
+        setSceneEpoch(previous => previous + 1)
+      }
+    })
+
+    return () => {
+      subscription.remove()
+    }
+  }, [])
+
   // The Boxes tab coming and going (e.g. a trip to the Collection and back): what the scene does around it is what is looked at.
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener('focus', () => {
@@ -195,6 +237,11 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
     })
     const unsubscribeBlur = navigation.addListener('blur', () => {
       logDiagnostic('tab.blur', { tab: 'catalogue' })
+
+      // An opened box is put away when the tab is left: coming back to Boxes shows the list, not the box that was open.
+      if (LEAVE_TAB_CLOSES_PHASES.includes(openingRef.current.phase)) {
+        openingRef.current.handleBackPress()
+      }
     })
 
     return () => {
@@ -252,6 +299,7 @@ export const useCatalogueFacade = (): ICatalogueFacade => {
     retryLabelText: t('catalogue.retry'),
     isLoadingBoxes,
     isSceneReady,
+    sceneEpoch,
     isErrorBoxes,
     cards,
     viewport,

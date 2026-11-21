@@ -30,6 +30,7 @@ const CatalogueScreen = () => {
     retryLabelText,
     isLoadingBoxes,
     isSceneReady,
+    sceneEpoch,
     isErrorBoxes,
     cards,
     viewport,
@@ -64,6 +65,7 @@ const CatalogueScreen = () => {
   const renderScene = () => (
     <View style={styles.sceneLayer} pointerEvents="none">
       <CatalogueScene
+        key={sceneEpoch}
         cards={cards}
         viewport={viewport}
         sceneSync={sceneSync}

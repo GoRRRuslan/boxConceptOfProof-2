@@ -7,7 +7,7 @@ Stack: Expo SDK 58 · TypeScript strict · Zustand 5 · React Query 5 · React N
 - Screen = `Screen.tsx` (render methods + one `useXxxFacade()` call), `Screen.styles.ts` (`makeStyles(theme)` with `ScaledSheet`), `index.ts`.
 - Facade section order: translations → navigation → state → store → queries/mutations → adapter → values → handlers → effects, each with a divider comment.
 - Complex logic → `_facadesLogic/`; data mapping → `_adapters/` (pure, `useMemo`, no stores/mutations).
-- Global state in Zustand (session-scoped, no persistence). Server/mock-API state in React Query.
+- Global state in Zustand. Only the balance and the bought watches are saved to a file (`src/services/persistence`), so that they survive the system removing the app from memory in the background; everything else is session-scoped. Server/mock-API state in React Query.
 
 ## Blockers
 - No abbreviations in names. English only in code and comments.
